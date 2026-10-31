@@ -365,7 +365,7 @@ private fun FolderDialog(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(apps, key = { it.packageName }) { app ->
-                            AppIcon(app) { onLaunch(app); onDismiss() }
+                            AppIcon(app, onClick = { onLaunch(app); onDismiss() })
                         }
                     }
                 }
