@@ -1,8 +1,5 @@
 package com.peladagpt.coloros16launcher
 
-import android.appwidget.AppWidgetHost
-import android.appwidget.AppWidgetManager
-import android.appwidget.AppWidgetProviderInfo
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -10,876 +7,289 @@ import android.graphics.drawable.Drawable
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.activity.compose.setContent
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.background
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.*
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.foundation.pager.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Apps
-import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.Widgets
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.viewinterop.AndroidView
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.*
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.*
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import kotlin.math.roundToInt
+import java.util.*
 
-private data class LaunchApp(val label: String, val packageName: String, val icon: Drawable)
+private data class HomeApp(val title: String, val packageName: String, val icon: Bitmap)
 
 class MainActivity : ComponentActivity() {
-    lateinit var widgetHost: AppWidgetHost
-        private set
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        widgetHost = AppWidgetHost(this, 16016)
         window.statusBarColor = android.graphics.Color.TRANSPARENT
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
-        window.decorView.systemUiVisibility =
-            android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
-            android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
-            android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-        setContent { ColorOSLauncher() }
-    }
-
-    override fun onStart() {
-        super.onStart()
-        runCatching { widgetHost.startListening() }
-    }
-
-    override fun onStop() {
-        runCatching { widgetHost.stopListening() }
-        super.onStop()
+        window.decorView.systemUiVisibility = 0x100 or 0x400 or 0x200
+        setContent { ColorOSHome() }
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ColorOSLauncher() {
+private fun ColorOSHome() {
     val context = LocalContext.current
-    val pm = context.packageManager
-    var apps by remember { mutableStateOf(emptyList<LaunchApp>()) }
+    val prefs = remember { context.getSharedPreferences("coloros_home", 0) }
+    var apps by remember { mutableStateOf(emptyList<HomeApp>()) }
     var drawer by remember { mutableStateOf(false) }
-    var search by remember { mutableStateOf("") }
-    var folderTitle by remember { mutableStateOf<String?>(null) }
-    var customFolders by remember { mutableStateOf<List<String>>(context.getSharedPreferences("launcher_prefs", 0).getStringSet("custom_folders", emptySet<String>())?.toList()?.sorted() ?: emptyList()) }
-    var showCreateFolder by remember { mutableStateOf(false) }
-    var newFolderName by remember { mutableStateOf("") }
-    var socialFolderName by remember { mutableStateOf(context.getSharedPreferences("launcher_prefs", 0).getString("folder_name_Social", "Social") ?: "Social") }
-    var toolsFolderName by remember { mutableStateOf(context.getSharedPreferences("launcher_prefs", 0).getString("folder_name_Ferramentas", "Ferramentas") ?: "Ferramentas") }
     var settings by remember { mutableStateOf(false) }
-    var gridColumns by remember { mutableIntStateOf(context.getSharedPreferences("launcher_prefs", 0).getInt("grid_columns", 4)) }
-    var dockCount by remember { mutableIntStateOf(context.getSharedPreferences("launcher_prefs", 0).getInt("dock_count", 3).coerceIn(1, 5)) }
-    var drawerColumns by remember { mutableIntStateOf(context.getSharedPreferences("launcher_prefs", 0).getInt("drawer_columns", 4).coerceIn(3, 6)) }
-    var homeIconSize by remember { mutableIntStateOf(context.getSharedPreferences("launcher_prefs", 0).getInt("home_icon_size", 54).coerceIn(42, 72)) }
-    var dockIconSize by remember { mutableIntStateOf(context.getSharedPreferences("launcher_prefs", 0).getInt("dock_icon_size", 42).coerceIn(32, 54)) }
-    var homeLabelSize by remember { mutableIntStateOf(context.getSharedPreferences("launcher_prefs", 0).getInt("home_label_size", 10).coerceIn(8, 14)) }
-    var folderOpacity by remember { mutableIntStateOf(context.getSharedPreferences("launcher_prefs", 0).getInt("folder_opacity", 20).coerceIn(10, 40)) }
-    var dockOpacity by remember { mutableIntStateOf(context.getSharedPreferences("launcher_prefs", 0).getInt("dock_opacity", 15).coerceIn(8, 35)) }
-    var folderIconSize by remember { mutableIntStateOf(context.getSharedPreferences("launcher_prefs", 0).getInt("folder_icon_size", 54).coerceIn(44, 72)) }
-    var iconShape by remember { mutableStateOf(context.getSharedPreferences("launcher_prefs", 0).getString("icon_shape", "squircle") ?: "squircle") }
-    var accentTheme by remember { mutableStateOf(context.getSharedPreferences("launcher_prefs", 0).getString("accent_theme", "mint") ?: "mint") }
-    var showHomeLabels by remember { mutableStateOf(context.getSharedPreferences("launcher_prefs", 0).getBoolean("show_home_labels", true)) }
-    var animationSpeed by remember { mutableIntStateOf(context.getSharedPreferences("launcher_prefs", 0).getInt("animation_speed", 100).coerceIn(60, 150)) }
+    var query by remember { mutableStateOf("") }
     var clock by remember { mutableStateOf("") }
-    var selectedApp by remember { mutableStateOf<LaunchApp?>(null) }
-    var pinnedPackages by remember { mutableStateOf(context.getSharedPreferences("launcher_prefs", 0).getStringSet("pinned_apps", emptySet())?.toSet() ?: emptySet()) }
-    var pinnedOrder by remember { mutableStateOf((context.getSharedPreferences("launcher_prefs", 0).getString("pinned_order", "")?.ifBlank { pinnedPackages.sorted().joinToString("|") } ?: pinnedPackages.sorted().joinToString("|")).split("|").filter { it.isNotBlank() }) }
-    var wallpaperUri by remember { mutableStateOf(context.getSharedPreferences("launcher_prefs", 0).getString("wallpaper_uri", null)) }
-    var wallpaperDim by remember { mutableIntStateOf(context.getSharedPreferences("launcher_prefs", 0).getInt("wallpaper_dim", 35).coerceIn(0, 70)) }
-    var appWidgetId by remember { mutableIntStateOf(context.getSharedPreferences("launcher_prefs", 0).getInt("app_widget_id", -1)) }
-    var pendingWidgetId by remember { mutableIntStateOf(-1) }
-    val widgetConfigureLauncher = rememberLauncherForActivityResult(StartActivityForResult()) { result ->
-        if (result.resultCode == android.app.Activity.RESULT_OK && pendingWidgetId >= 0) {
-            appWidgetId = pendingWidgetId
-            context.getSharedPreferences("launcher_prefs", 0).edit().putInt("app_widget_id", appWidgetId).apply()
-        } else if (pendingWidgetId >= 0) {
-            (context as? MainActivity)?.widgetHost?.deleteAppWidgetId(pendingWidgetId)
-        }
-        pendingWidgetId = -1
-    }
-    val widgetPicker = rememberLauncherForActivityResult(StartActivityForResult()) { result ->
-        val pickedId = result.data?.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, pendingWidgetId) ?: pendingWidgetId
-        if (result.resultCode == android.app.Activity.RESULT_OK && pickedId >= 0) {
-            pendingWidgetId = pickedId
-            val info = AppWidgetManager.getInstance(context).getAppWidgetInfo(pickedId)
-            if (info?.configure != null) {
-                val configureIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE).apply {
-                    component = info.configure
-                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, pickedId)
-                }
-                widgetConfigureLauncher.launch(configureIntent)
-            } else {
-                appWidgetId = pickedId
-                context.getSharedPreferences("launcher_prefs", 0).edit().putInt("app_widget_id", appWidgetId).apply()
-                pendingWidgetId = -1
-            }
-        } else if (pendingWidgetId >= 0) {
-            (context as? MainActivity)?.widgetHost?.deleteAppWidgetId(pendingWidgetId)
-            pendingWidgetId = -1
-        }
-    }
-    val wallpaperPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) {
-            runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-            wallpaperUri = uri.toString()
-            context.getSharedPreferences("launcher_prefs", 0).edit().putString("wallpaper_uri", wallpaperUri).apply()
-        }
-    }
+    var date by remember { mutableStateOf("") }
+    var grid by remember { mutableIntStateOf(prefs.getInt("grid", 4).coerceIn(4, 5)) }
+    var iconScale by remember { mutableFloatStateOf(prefs.getFloat("icon_scale", 1f).coerceIn(.85f, 1.2f)) }
+    var labels by remember { mutableStateOf(prefs.getBoolean("labels", true)) }
+    var dark by remember { mutableStateOf(prefs.getBoolean("dark", false)) }
+    var tone by remember { mutableIntStateOf(prefs.getInt("tone", 0)) }
+    var editMode by remember { mutableStateOf(false) }
 
-    val packageReceiver = remember(context) {
-        object : android.content.BroadcastReceiver() {
-            override fun onReceive(receiverContext: android.content.Context?, intent: Intent?) {
-                apps = loadLaunchApps(context)
-            }
-        }
-    }
-    DisposableEffect(packageReceiver) {
-        val filter = android.content.IntentFilter().apply {
-            addAction(Intent.ACTION_PACKAGE_ADDED)
-            addAction(Intent.ACTION_PACKAGE_REMOVED)
-            addAction(Intent.ACTION_PACKAGE_CHANGED)
-            addDataScheme("package")
-        }
-        if (android.os.Build.VERSION.SDK_INT >= 33) {
-            context.registerReceiver(packageReceiver, filter, android.content.Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            @Suppress("DEPRECATION")
-            context.registerReceiver(packageReceiver, filter)
-        }
-        onDispose { runCatching { context.unregisterReceiver(packageReceiver) } }
-    }
-
-    LaunchedEffect(Unit) {
-        apps = loadLaunchApps(context)
+    fun refreshApps() {
+        val pm = context.packageManager
+        apps = pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0)
+            .mapNotNull { info -> runCatching {
+                HomeApp(info.loadLabel(pm).toString(), info.activityInfo.packageName, drawableBitmap(info.loadIcon(pm)))
+            }.getOrNull() }.distinctBy { it.packageName }.sortedBy { it.title.lowercase(Locale.getDefault()) }
     }
     LaunchedEffect(Unit) {
+        refreshApps()
         while (true) {
-            clock = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
+            val now = Date()
+            clock = SimpleDateFormat("HH:mm", Locale.getDefault()).format(now)
+            date = SimpleDateFormat("EEEE, d 'de' MMMM", Locale("pt", "BR")).format(now).replaceFirstChar { it.uppercase() }
             delay(1000)
         }
     }
-
-    val favorites = remember(apps, pinnedPackages) {
-        val chosen = apps.filter { it.packageName in pinnedPackages }
-            .sortedBy { app -> pinnedOrder.indexOf(app.packageName).let { if (it < 0) Int.MAX_VALUE else it } }
-        if (chosen.isNotEmpty()) chosen else apps.take(4)
-    }
-    val homePageSize = gridColumns * 3
-    val homePageCount = maxOf(1, (favorites.size + homePageSize - 1) / homePageSize)
-    val homePagerState = rememberPagerState(pageCount = { homePageCount })
-
-    val filtered = remember(apps, search) {
-        if (search.isBlank()) apps else apps.filter { it.label.contains(search, true) }
+    BackHandler(drawer || settings || editMode) {
+        when { editMode -> editMode = false; drawer -> { drawer = false; query = "" }; settings -> settings = false }
     }
 
-    BackHandler(enabled = drawer || settings || folderTitle != null || showCreateFolder || selectedApp != null) {
-        when {
-            selectedApp != null -> selectedApp = null
-            folderTitle != null -> folderTitle = null
-            showCreateFolder -> showCreateFolder = false
-            drawer -> { drawer = false; search = "" }
-            settings -> settings = false
-        }
+    val ink = if (dark) Color.White else Color(0xFF20242A)
+    val muted = ink.copy(alpha = .62f)
+    val palette = if (dark) listOf(Color(0xFF17191D), Color(0xFF282B31), Color(0xFF111317)) else when (tone) {
+        1 -> listOf(Color(0xFFE7D8D0), Color(0xFFB9C9D4), Color(0xFFE8E5DE))
+        2 -> listOf(Color(0xFFD8E6D9), Color(0xFFA8C8BD), Color(0xFFE9E5D8))
+        else -> listOf(Color(0xFFB9CBD9), Color(0xFF879FB7), Color(0xFFE0D9D0))
     }
+    val homeApps = remember(apps) { apps.filterNot { it.packageName == context.packageName } }
+    val pageSize = grid * 4
+    val pageCount = maxOf(1, (homeApps.size + pageSize - 1) / pageSize)
+    val pager = rememberPagerState(pageCount = { pageCount })
+    val filtered = remember(homeApps, query) { if (query.isBlank()) homeApps else homeApps.filter { it.title.contains(query, true) } }
 
-    Box(
-        Modifier.fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Color(0xFF17233D), Color(0xFF354B70), Color(0xFF111827))))
-            .pointerInput(drawer) {
-                var total = 0f
-                detectVerticalDragGestures(
-                    onVerticalDrag = { _, amount -> total += amount },
-                    onDragEnd = { if (total < -35f) drawer = true; if (total > 35f) drawer = false; total = 0f }
-                )
-            }
-    ) {
-        if (wallpaperUri != null && !settings) {
-            AsyncImage(
-                model = ImageRequest.Builder(context).data(android.net.Uri.parse(wallpaperUri)).crossfade(true).build(),
-                contentDescription = "Papel de parede",
-                modifier = Modifier.fillMaxSize(),
-                contentScale = androidx.compose.ui.layout.ContentScale.Crop
-            )
-            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = wallpaperDim / 100f)))
-        }
-        // Soft ambient highlights behind the glass surfaces.
-        Box(Modifier.offset(x = (-80).dp, y = 190.dp).size(260.dp).blur(75.dp).background(Color(0x665E9EFF), CircleShape))
-        Box(Modifier.align(Alignment.BottomEnd).offset(x = 70.dp, y = (-110).dp).size(250.dp).blur(80.dp).background(Color(0x5576D8C8), CircleShape))
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(palette)).pointerInput(drawer) {
+        var dy = 0f
+        detectVerticalDragGestures(onVerticalDrag = { _, amount -> dy += amount }, onDragEnd = {
+            if (dy < -35f) drawer = true
+            if (dy > 35f) drawer = false
+            dy = 0f
+        })
+    }) {
+        Box(Modifier.offset((-90).dp, 180.dp).size(270.dp).blur(75.dp).background(Color(0x5577A9C8), CircleShape))
+        Box(Modifier.align(Alignment.BottomEnd).offset(80.dp, (-100).dp).size(260.dp).blur(80.dp).background(Color(0x5589BBAA), CircleShape))
 
-        AnimatedContent(
-            targetState = settings,
-            transitionSpec = {
-                (fadeIn(tween(220 * animationSpeed / 100)) + slideInVertically(tween(320 * animationSpeed / 100)) { if (targetState) it / 8 else -it / 10 }) togetherWith
-                    (fadeOut(tween(160 * animationSpeed / 100)) + slideOutVertically(tween(260 * animationSpeed / 100)) { if (targetState) -it / 10 else it / 8 })
-            },
-            label = "main-screen"
-        ) { showSettings ->
+        AnimatedContent(settings, transitionSpec = {
+            (fadeIn() + slideInVertically { it / 8 }) togetherWith (fadeOut() + slideOutVertically { -it / 8 })
+        }, label = "screen") { showSettings ->
             if (showSettings) {
-                SettingsPage(gridColumns = gridColumns, onGridColumnsChange = { columns -> gridColumns = columns; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("grid_columns", columns).apply() }, dockCount = dockCount, onDockCountChange = { count -> dockCount = count; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("dock_count", count).apply() }, drawerColumns = drawerColumns, onDrawerColumnsChange = { count -> drawerColumns = count; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("drawer_columns", count).apply() }, iconSize = homeIconSize, onIconSizeChange = { size -> homeIconSize = size; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("home_icon_size", size).apply() }, dockIconSize = dockIconSize, onDockIconSizeChange = { size -> dockIconSize = size; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("dock_icon_size", size).apply() }, labelSize = homeLabelSize, onLabelSizeChange = { size -> homeLabelSize = size; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("home_label_size", size).apply() }, folderOpacity = folderOpacity, onFolderOpacityChange = { value -> folderOpacity = value; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("folder_opacity", value).apply() }, dockOpacity = dockOpacity, onDockOpacityChange = { value -> dockOpacity = value; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("dock_opacity", value).apply() }, folderIconSize = folderIconSize, onFolderIconSizeChange = { value -> folderIconSize = value; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("folder_icon_size", value).apply() }, iconShape = iconShape, onIconShapeChange = { shape -> iconShape = shape; context.getSharedPreferences("launcher_prefs", 0).edit().putString("icon_shape", shape).apply() }, accentTheme = accentTheme, onAccentThemeChange = { theme -> accentTheme = theme; context.getSharedPreferences("launcher_prefs", 0).edit().putString("accent_theme", theme).apply() }, showLabels = showHomeLabels, onShowLabelsChange = { enabled -> showHomeLabels = enabled; context.getSharedPreferences("launcher_prefs", 0).edit().putBoolean("show_home_labels", enabled).apply() }, animationSpeed = animationSpeed, onAnimationSpeedChange = { speed -> animationSpeed = speed; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("animation_speed", speed).apply() }, hasWallpaper = wallpaperUri != null, wallpaperDim = wallpaperDim, onWallpaperDimChange = { value -> wallpaperDim = value; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("wallpaper_dim", value).apply() }, onChooseWallpaper = { wallpaperPicker.launch(arrayOf("image/*")) }, onRemoveWallpaper = { wallpaperUri = null; context.getSharedPreferences("launcher_prefs", 0).edit().remove("wallpaper_uri").apply() }, onBack = { settings = false })
+                SettingsScreen(dark, { dark = it; prefs.edit().putBoolean("dark", it).apply() },
+                    grid, { grid = it; prefs.edit().putInt("grid", it).apply() },
+                    iconScale, { iconScale = it; prefs.edit().putFloat("icon_scale", it).apply() },
+                    labels, { labels = it; prefs.edit().putBoolean("labels", it).apply() },
+                    tone, { tone = it; prefs.edit().putInt("tone", it).apply() }, { settings = false })
             } else {
                 Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 22.dp)) {
-                    Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Column {
-                            Text("ColorOS", color = Color.White.copy(alpha = .78f), fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                            Text("16", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    Row(Modifier.fillMaxWidth().padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(date, color = ink.copy(alpha = .78f), fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                            Text(clock, color = ink, fontSize = 60.sp, lineHeight = 64.sp, fontWeight = FontWeight.Light, letterSpacing = (-2).sp)
                         }
-                        Surface(color = themeAccentColor(accentTheme).copy(alpha = .24f), shape = CircleShape, modifier = Modifier.size(42.dp).clickable { settings = true }) {
-                            Icon(Icons.Rounded.Settings, null, tint = Color.White, modifier = Modifier.padding(10.dp))
-                        }
-                    }
-
-                    Spacer(Modifier.height(26.dp))
-                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(30.dp)).background(Color.White.copy(alpha = .12f)).blur(0.dp).padding(22.dp)) {
-                        Text(clock, color = Color.White, fontSize = 54.sp, fontWeight = FontWeight.Light, letterSpacing = (-2).sp)
-                        Text(SimpleDateFormat("EEEE, d 'de' MMMM", Locale("pt", "BR")).format(Date()).replaceFirstChar { it.uppercase() }, color = Color.White.copy(alpha = .78f), fontSize = 14.sp)
-                        Spacer(Modifier.height(18.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Rounded.Widgets, null, tint = Color.White.copy(alpha = .9f), modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Espaço inteligente", color = Color.White.copy(alpha = .9f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                            Spacer(Modifier.weight(1f))
-                            if (appWidgetId > 0) {
-                                Text("Remover", color = Color.White.copy(alpha = .65f), fontSize = 11.sp, modifier = Modifier.clickable {
-                                    (context as? MainActivity)?.widgetHost?.deleteAppWidgetId(appWidgetId)
-                                    appWidgetId = -1
-                                    context.getSharedPreferences("launcher_prefs", 0).edit().remove("app_widget_id").apply()
-                                })
-                                Spacer(Modifier.width(10.dp))
-                            }
-                            Text(if (appWidgetId > 0) "＋ Trocar" else "＋ Widget", color = Color.White.copy(alpha = .82f), fontSize = 12.sp, modifier = Modifier.clickable {
-                                val host = (context as? MainActivity)?.widgetHost
-                                if (host != null) {
-                                    pendingWidgetId = host.allocateAppWidgetId()
-                                    val pickIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_PICK).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, pendingWidgetId)
-                                    widgetPicker.launch(pickIntent)
+                        Column(horizontalAlignment = Alignment.End) {
+                            Surface(color = Color.White.copy(alpha = .30f), shape = RoundedCornerShape(22.dp)) {
+                                Row(Modifier.padding(horizontal = 14.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Rounded.Cloud, null, tint = ink, modifier = Modifier.size(20.dp))
+                                    Spacer(Modifier.width(7.dp))
+                                    Text("—°", color = ink, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                                 }
-                            })
-                        }
-                        Spacer(Modifier.height(10.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                            val widgetInfo = remember(appWidgetId) {
-                                if (appWidgetId > 0) AppWidgetManager.getInstance(context).getAppWidgetInfo(appWidgetId) else null
                             }
-                            val host = context as? MainActivity
-                            if (widgetInfo != null && host != null) {
-                                AndroidView(
-                                    factory = { viewContext ->
-                                        host.widgetHost.createView(viewContext, appWidgetId, widgetInfo).apply {
-                                            setAppWidget(appWidgetId, widgetInfo)
-                                        }
-                                    },
-                                    modifier = Modifier.weight(1f).heightIn(min = 110.dp, max = 190.dp)
-                                )
-                            } else {
-                                WidgetTile("Widgets", "Toque em + Widget para adicionar", Modifier.weight(1f))
-                            }
-                            BatteryTile(accentTheme, Modifier.weight(1f))
+                            Text("Clima", color = muted, fontSize = 10.sp, modifier = Modifier.padding(top = 5.dp, end = 5.dp))
                         }
                     }
-
-                    Spacer(Modifier.height(25.dp))
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("Aplicativos", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("＋ Pasta", color = Color.White.copy(alpha = .8f), fontSize = 12.sp, modifier = Modifier.clickable { newFolderName = ""; showCreateFolder = true })
-                            Spacer(Modifier.width(14.dp))
-                            Text("Editar", color = Color.White.copy(alpha = .7f), fontSize = 12.sp, modifier = Modifier.clickable { settings = true })
-                        }
+                    Spacer(Modifier.height(22.dp))
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(25.dp)).background(Color.White.copy(alpha = .34f))
+                        .clickable { drawer = true }.padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.Search, null, tint = muted)
+                        Spacer(Modifier.width(10.dp))
+                        Text("Pesquisar aplicativos", color = muted, fontSize = 14.sp)
+                        Spacer(Modifier.weight(1f))
+                        Icon(Icons.Rounded.Apps, null, tint = muted)
                     }
-                    Spacer(Modifier.height(15.dp))
-                    HorizontalPager(state = homePagerState, modifier = Modifier.weight(1f), beyondViewportPageCount = 1) { page ->
-                        val pageApps = favorites.drop(page * homePageSize).take(homePageSize)
-                        LazyVerticalGrid(
-                            columns = GridCells.Fixed(gridColumns),
-                            modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.spacedBy(17.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
+                    Spacer(Modifier.height(20.dp))
+                    HorizontalPager(state = pager, modifier = Modifier.weight(1f), key = { it }) { page ->
+                        val pageApps = homeApps.drop(page * pageSize).take(pageSize)
+                        LazyVerticalGrid(columns = GridCells.Fixed(grid), modifier = Modifier.fillMaxSize(),
+                            userScrollEnabled = false, horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(19.dp), contentPadding = PaddingValues(top = 5.dp, bottom = 10.dp)) {
                             items(pageApps, key = { it.packageName }) { app ->
-                                AppIcon(app, iconSize = homeIconSize.dp, iconShape = iconShape, showLabel = showHomeLabels, labelSize = homeLabelSize, onClick = { launch(app, context) }, onLongClick = { selectedApp = app })
-                            }
-                            if (page == 0) {
-                                item(key = "folder_social") {
-                                    FolderIcon(label = socialFolderName, iconShape = iconShape, folderSize = folderIconSize.dp, backgroundOpacity = folderOpacity / 100f, apps = apps.filter { app -> listOf("instagram", "facebook", "tiktok", "twitter", "discord", "reddit", "whatsapp", "pinterest", "snapchat").any { term -> app.label.contains(term, true) || app.packageName.contains(term, true) } }.take(4)) { folderTitle = "Social" }
-                                }
-                                item(key = "folder_tools") {
-                                    FolderIcon(label = toolsFolderName, iconShape = iconShape, folderSize = folderIconSize.dp, backgroundOpacity = folderOpacity / 100f, apps = apps.filter { app -> listOf("settings", "file", "manager", "clock", "calculator", "camera", "gallery", "music", "browser", "security", "notes").any { term -> app.label.contains(term, true) || app.packageName.contains(term, true) } }.take(4)) { folderTitle = "Ferramentas" }
-                                }
-                                items(customFolders, key = { "custom_folder_" + it }) { name ->
-                                    val saved: Set<String> = context.getSharedPreferences("launcher_prefs", 0).getStringSet("folder_apps_" + name, emptySet<String>()) ?: emptySet()
-                                    FolderIcon(label = name, iconShape = iconShape, folderSize = folderIconSize.dp, backgroundOpacity = folderOpacity / 100f, apps = apps.filter { it.packageName in saved }.take(4)) { folderTitle = name }
-                                }
+                                HomeIcon(app, iconScale, labels, ink, {
+                                    runCatching { context.startActivity(context.packageManager.getLaunchIntentForPackage(app.packageName)) }
+                                }, { editMode = true })
                             }
                         }
                     }
-                    if (homePageCount > 1) {
-                        Row(Modifier.fillMaxWidth().padding(top = 5.dp, bottom = 7.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                            repeat(homePageCount) { index ->
-                                Box(Modifier.padding(horizontal = 4.dp).size(if (homePagerState.currentPage == index) 7.dp else 5.dp).clip(CircleShape).background(Color.White.copy(alpha = if (homePagerState.currentPage == index) .95f else .38f)))
+                    Row(Modifier.fillMaxWidth().padding(bottom = 14.dp), horizontalArrangement = Arrangement.Center) {
+                        repeat(pageCount) { index ->
+                            Box(Modifier.padding(horizontal = 3.dp).size(if (pager.currentPage == index) 16.dp else 5.dp, 5.dp)
+                                .clip(CircleShape).background(ink.copy(alpha = if (pager.currentPage == index) .8f else .28f)))
+                        }
+                    }
+                    Surface(color = Color.White.copy(alpha = .32f), shape = RoundedCornerShape(30.dp),
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+                        val dock = homeApps.filter { app ->
+                            val p = app.packageName.lowercase()
+                            p.contains("dialer") || p.contains("messaging") || p.contains("chrome") || p.contains("camera")
+                        }.take(4).ifEmpty { homeApps.take(4) }
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 15.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                            dock.forEach { app ->
+                                Image(app.icon.asImageBitmap(), app.title, Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).clickable {
+                                    runCatching { context.startActivity(context.packageManager.getLaunchIntentForPackage(app.packageName)) }
+                                })
                             }
                         }
                     }
-
-                    Row(Modifier.fillMaxWidth().padding(bottom = 12.dp).clip(RoundedCornerShape(28.dp)).background(Color.White.copy(alpha = dockOpacity / 100f)).padding(horizontal = 15.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                        favorites.take(dockCount).forEach { app -> SmallAppIcon(app, iconShape, dockIconSize.dp) { launch(app, context) } }
-                        Surface(color = Color.White.copy(alpha = .18f), shape = CircleShape, modifier = Modifier.size(48.dp).clickable { drawer = true }) {
-                            Icon(Icons.Rounded.Apps, "Abrir aplicativos", tint = Color.White, modifier = Modifier.padding(12.dp))
+                    Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text("ColorOS 16 • Independent", color = muted, fontSize = 10.sp)
+                        Row {
+                            Icon(Icons.Rounded.Widgets, null, tint = muted, modifier = Modifier.clickable { drawer = true })
+                            Spacer(Modifier.width(18.dp))
+                            Icon(Icons.Rounded.Settings, null, tint = muted, modifier = Modifier.clickable { settings = true })
                         }
                     }
                 }
             }
         }
 
-        AnimatedVisibility(
-            visible = drawer,
-            enter = fadeIn(tween(180 * animationSpeed / 100)) + slideInVertically(tween(340 * animationSpeed / 100)) { it / 3 } + scaleIn(initialScale = .97f, animationSpec = spring(dampingRatio = .82f, stiffness = 360f)),
-            exit = fadeOut(tween(150 * animationSpeed / 100)) + slideOutVertically(tween(260 * animationSpeed / 100)) { it / 4 } + scaleOut(targetScale = .985f),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            Column(Modifier.fillMaxSize().background(Color(0xF2182235)).statusBarsPadding().navigationBarsPadding().padding(horizontal = 20.dp)) {
-                Row(Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 18.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("Todos os aplicativos", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                    Text("Fechar", color = Color.White.copy(alpha = .75f), modifier = Modifier.clickable { drawer = false })
+        AnimatedVisibility(drawer, enter = fadeIn() + slideInVertically { it / 3 } + scaleIn(.96f),
+            exit = fadeOut() + slideOutVertically { it / 4 } + scaleOut(.98f), modifier = Modifier.fillMaxSize()) {
+            Column(Modifier.fillMaxSize().background(if (dark) Color(0xF21A1C20) else Color(0xF2F3F4F6))
+                .statusBarsPadding().navigationBarsPadding().padding(horizontal = 22.dp)) {
+                Row(Modifier.fillMaxWidth().padding(top = 22.dp, bottom = 18.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Todos os aplicativos", color = if (dark) Color.White else Color(0xFF20242A), fontSize = 25.sp, fontWeight = FontWeight.SemiBold)
+                        Text(filtered.size.toString() + " aplicativos", color = muted, fontSize = 12.sp)
+                    }
+                    Icon(Icons.Rounded.Settings, null, tint = muted, modifier = Modifier.clickable { drawer = false; settings = true })
                 }
-                OutlinedTextField(value = search, onValueChange = { search = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text("Pesquisar aplicativos") }, leadingIcon = { Icon(Icons.Rounded.Search, null) }, singleLine = true, shape = RoundedCornerShape(22.dp), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = Color.White.copy(alpha = .6f), unfocusedBorderColor = Color.White.copy(alpha = .2f), focusedLeadingIconColor = Color.White, unfocusedLeadingIconColor = Color.White, focusedPlaceholderColor = Color.White.copy(alpha = .5f), unfocusedPlaceholderColor = Color.White.copy(alpha = .5f)))
-                Spacer(Modifier.height(18.dp))
-                LazyVerticalGrid(columns = GridCells.Fixed(drawerColumns), verticalArrangement = Arrangement.spacedBy(20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(filtered, key = { it.packageName }) { app -> AppIcon(app, iconShape = iconShape, onClick = { launch(app, context); drawer = false }, onLongClick = { selectedApp = app }) }
+                OutlinedTextField(query, { query = it }, Modifier.fillMaxWidth(), placeholder = { Text("Pesquisar") },
+                    leadingIcon = { Icon(Icons.Rounded.Search, null) }, singleLine = true, shape = RoundedCornerShape(22.dp))
+                Spacer(Modifier.height(16.dp))
+                LazyVerticalGrid(columns = GridCells.Fixed(grid), modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(16.dp),
+                    contentPadding = PaddingValues(bottom = 20.dp)) {
+                    items(filtered, key = { it.packageName }) { app ->
+                        HomeIcon(app, iconScale, true, if (dark) Color.White else Color(0xFF20242A), {
+                            drawer = false; query = ""
+                            runCatching { context.startActivity(context.packageManager.getLaunchIntentForPackage(app.packageName)) }
+                        }, {})
+                    }
                 }
             }
         }
-    }
-
-    if (showCreateFolder) {
-        AlertDialog(
-            onDismissRequest = { showCreateFolder = false },
-            title = { Text("Criar pasta") },
-            text = { OutlinedTextField(value = newFolderName, onValueChange = { newFolderName = it.take(24) }, singleLine = true, label = { Text("Nome da pasta") }) },
-            confirmButton = {
-                TextButton(onClick = {
-                    val name = newFolderName.trim()
-                    if (name.isNotEmpty() && customFolders.none { it.equals(name, ignoreCase = true) } && !name.equals("Social", true) && !name.equals("Ferramentas", true)) {
-                        customFolders = customFolders + name
-                        context.getSharedPreferences("launcher_prefs", 0).edit().putStringSet("custom_folders", customFolders.toSet()).putStringSet("folder_apps_" + name, emptySet()).apply()
-                    }
-                    showCreateFolder = false
-                }) { Text("Criar") }
-            },
-            dismissButton = { TextButton(onClick = { showCreateFolder = false }) { Text("Cancelar") } }
-        )
-    }
-
-    selectedApp?.let { app ->
-        val isPinned = app.packageName in pinnedPackages
-        AlertDialog(
-            onDismissRequest = { selectedApp = null },
-            title = { Text(app.label) },
-            text = { Text(if (isPinned) "Este aplicativo está na tela inicial." else "Adicionar este aplicativo à tela inicial?") },
-            confirmButton = {
-                TextButton(onClick = {
-                    val next = if (isPinned) pinnedPackages - app.packageName else pinnedPackages + app.packageName
-                    val nextOrder = if (isPinned) pinnedOrder.filterNot { it == app.packageName } else pinnedOrder.filterNot { it == app.packageName } + app.packageName
-                    pinnedPackages = next
-                    pinnedOrder = nextOrder
-                    context.getSharedPreferences("launcher_prefs", 0).edit()
-                        .putStringSet("pinned_apps", next)
-                        .putString("pinned_order", nextOrder.joinToString("|")).apply()
-                    selectedApp = null
-                }) { Text(if (isPinned) "Remover da tela inicial" else "Adicionar") }
-            },
-            dismissButton = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    val currentIndex = pinnedOrder.indexOf(app.packageName)
-                    if (isPinned && currentIndex > 0) {
-                        TextButton(onClick = {
-                            val order = pinnedOrder.toMutableList()
-                            val previous = order[currentIndex - 1]
-                            order[currentIndex - 1] = order[currentIndex]
-                            order[currentIndex] = previous
-                            pinnedOrder = order
-                            context.getSharedPreferences("launcher_prefs", 0).edit().putString("pinned_order", order.joinToString("|")).apply()
-                            selectedApp = null
-                        }) { Text("←") }
-                    }
-                    if (isPinned && currentIndex >= 0 && currentIndex < pinnedOrder.lastIndex) {
-                        TextButton(onClick = {
-                            val order = pinnedOrder.toMutableList()
-                            val next = order[currentIndex + 1]
-                            order[currentIndex + 1] = order[currentIndex]
-                            order[currentIndex] = next
-                            pinnedOrder = order
-                            context.getSharedPreferences("launcher_prefs", 0).edit().putString("pinned_order", order.joinToString("|")).apply()
-                            selectedApp = null
-                        }) { Text("→") }
-                    }
-                    TextButton(onClick = { selectedApp = null }) { Text("Fechar") }
-                }
-            }
-        )
-    }
-
-    folderTitle?.let { title ->
-        val prefs = context.getSharedPreferences("launcher_prefs", 0)
-        val prefKey = "folder_apps_" + title
-        val defaultPackages = remember(apps, title) {
-            val terms = if (title == "Social") listOf("instagram", "facebook", "tiktok", "twitter", "discord", "reddit", "telegram", "whatsapp", "pinterest", "snapchat")
-                        else if (title == "Ferramentas") listOf("settings", "file", "manager", "clock", "calculator", "camera", "gallery", "music", "browser", "security", "weather", "notes")
-                        else emptyList()
-            apps.filter { app -> terms.any { term -> app.label.contains(term, true) || app.packageName.contains(term, true) } }
-                .map { it.packageName }.toSet()
+        if (editMode) Surface(color = Color(0xE92A3038), shape = RoundedCornerShape(20.dp),
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 35.dp).clickable { editMode = false }) {
+            Text("Concluído", color = Color.White, modifier = Modifier.padding(horizontal = 28.dp, vertical = 14.dp), fontWeight = FontWeight.SemiBold)
         }
-        var selectedPackages by remember(title, apps) {
-            mutableStateOf(prefs.getStringSet(prefKey, null)?.toSet() ?: defaultPackages)
-        }
-        val folderApps = apps.filter { it.packageName in selectedPackages }
-        FolderDialog(
-            title = title,
-            displayName = when (title) { "Social" -> socialFolderName; "Ferramentas" -> toolsFolderName; else -> title },
-            iconShape = iconShape,
-            apps = folderApps,
-            allApps = apps,
-            selectedPackages = selectedPackages,
-            onToggleApp = { app ->
-                val next = if (app.packageName in selectedPackages) selectedPackages - app.packageName
-                           else selectedPackages + app.packageName
-                selectedPackages = next
-                prefs.edit().putStringSet(prefKey, next).apply()
-            },
-            onLaunch = { app -> launch(app, context) },
-            onRename = { newName ->
-                if (title == "Social") { socialFolderName = newName; prefs.edit().putString("folder_name_Social", newName).apply() }
-                else if (title == "Ferramentas") { toolsFolderName = newName; prefs.edit().putString("folder_name_Ferramentas", newName).apply() }
-                else if (title in customFolders && newName.isNotBlank() && customFolders.none { it.equals(newName, ignoreCase = true) }) {
-                    customFolders = customFolders.map { if (it == title) newName else it }
-                    prefs.edit().putStringSet("custom_folders", customFolders.toSet())
-                        .putStringSet("folder_apps_" + newName, selectedPackages)
-                        .remove(prefKey).apply()
-                    folderTitle = null
-                }
-            },
-            canDelete = title in customFolders,
-            onDelete = {
-                customFolders = customFolders.filterNot { it == title }
-                prefs.edit().putStringSet("custom_folders", customFolders.toSet()).remove(prefKey).apply()
-                folderTitle = null
-            },
-            onDismiss = { folderTitle = null }
-        )
-    }
-}
-
-@Composable
-private fun BatteryTile(accentTheme: String, modifier: Modifier = Modifier) {
-    val context = LocalContext.current
-    var percent by remember { mutableIntStateOf(-1) }
-    var charging by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            val status = context.registerReceiver(null, android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-            val level = status?.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1) ?: -1
-            val scale = status?.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, 100) ?: 100
-            percent = if (level >= 0 && scale > 0) (level * 100 / scale) else -1
-            val state = status?.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1) ?: -1
-            charging = state == android.os.BatteryManager.BATTERY_STATUS_CHARGING ||
-                state == android.os.BatteryManager.BATTERY_STATUS_FULL
-            delay(30_000)
-        }
-    }
-    Column(modifier.clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha = .10f)).padding(13.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Bateria", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-            Spacer(Modifier.weight(1f))
-            Text(if (charging) "Carregando" else "Dispositivo", color = Color.White.copy(alpha = .65f), fontSize = 10.sp)
-        }
-        Spacer(Modifier.height(9.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.weight(1f).height(7.dp).clip(CircleShape).background(Color.White.copy(alpha = .18f))) {
-                Box(Modifier.fillMaxWidth(if (percent >= 0) percent / 100f else 0f).fillMaxHeight().clip(CircleShape).background(themeAccentColor(accentTheme)))
-            }
-            Spacer(Modifier.width(8.dp))
-            Text(if (percent >= 0) "$percent%" else "--", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-        }
-    }
-}
-
-@Composable
-private fun WidgetTile(title: String, subtitle: String, modifier: Modifier = Modifier) {
-    Column(modifier.clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha = .10f)).padding(13.dp)) {
-        Text(title, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-        Spacer(Modifier.height(4.dp))
-        Text(subtitle, color = Color.White.copy(alpha = .62f), fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun AppIcon(app: LaunchApp, iconSize: androidx.compose.ui.unit.Dp = 54.dp, iconShape: String = "squircle", showLabel: Boolean = true, onClick: () -> Unit, onLongClick: () -> Unit = {}, labelSize: Int = 10) {
-    val scope = rememberCoroutineScope()
-    var pressed by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (pressed) .86f else 1f, spring(dampingRatio = .42f, stiffness = 420f), label = "icon-press")
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().scale(scale).combinedClickable(onClick = {
-        scope.launch {
-            pressed = true
-            delay(85)
-            pressed = false
-            onClick()
-        }
-    }, onLongClick = onLongClick)) {
-        AppArtwork(app.icon, Modifier.size(iconSize), iconShape)
+private fun HomeIcon(app: HomeApp, scale: Float, showLabel: Boolean, ink: Color, onClick: () -> Unit, onLongClick: () -> Unit) {
+    val size by animateFloatAsState(scale, spring(stiffness = Spring.StiffnessMedium), label = "icon")
+    Column(Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLongClick), horizontalAlignment = Alignment.CenterHorizontally) {
+        Image(app.icon.asImageBitmap(), app.title, Modifier.size((54 * size).dp).clip(RoundedCornerShape(18.dp)))
         if (showLabel) {
             Spacer(Modifier.height(6.dp))
-            Text(app.label, color = Color.White, fontSize = labelSize.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(app.title, color = ink, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
 
 @Composable
-private fun SmallAppIcon(app: LaunchApp, iconShape: String = "squircle", iconSize: androidx.compose.ui.unit.Dp = 42.dp, onClick: () -> Unit) {
-    AppArtwork(app.icon, Modifier.size(iconSize).clickable { onClick() }, iconShape)
-}
-
-@Composable
-private fun FolderIcon(label: String = "Social", iconShape: String = "squircle", folderSize: androidx.compose.ui.unit.Dp = 54.dp, backgroundOpacity: Float = .20f, apps: List<LaunchApp> = emptyList(), onClick: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { onClick() }) {
-        Box(
-            Modifier.size(folderSize).clip(RoundedCornerShape(folderSize * .31f))
-                .background(Color.White.copy(alpha = backgroundOpacity)).padding(folderSize * .13f),
-            contentAlignment = Alignment.Center
-        ) {
-            if (apps.isEmpty()) {
-                Box(Modifier.size(folderSize * .63f).clip(RoundedCornerShape(folderSize * .19f)).background(Color.White.copy(alpha = backgroundOpacity)))
-            } else {
-                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    apps.chunked(2).forEach { rowApps ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                            rowApps.forEach { app -> AppArtwork(app.icon, Modifier.size(folderSize * .315f), iconShape) }
-                        }
-                    }
-                }
-            }
-        }
-        Spacer(Modifier.height(6.dp))
-        Text(label, color = Color.White, fontSize = 10.sp)
-    }
-}
-
-@Composable
-private fun AppArtwork(drawable: Drawable, modifier: Modifier = Modifier, iconShape: String = "squircle") {
-    val bitmap = remember(drawable) {
-        val bmp = Bitmap.createBitmap( drawable.intrinsicWidth.coerceAtLeast(1), drawable.intrinsicHeight.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bmp)
-        drawable.setBounds(0, 0, canvas.width, canvas.height)
-        drawable.draw(canvas)
-        bmp.asImageBitmap()
-    }
-    val shape = when (iconShape) { "circle" -> CircleShape; "rounded" -> RoundedCornerShape(18.dp); else -> RoundedCornerShape(28) }
-    Image(bitmap, null, modifier.clip(shape))
-}
-
-private fun themeAccentColor(theme: String): Color = when (theme) {
-    "blue" -> Color(0xFF8FC7FF)
-    "violet" -> Color(0xFFC4A5FF)
-    "pink" -> Color(0xFFFFA6C9)
-    "orange" -> Color(0xFFFFBE83)
-    "mono" -> Color(0xFFD0D5DD)
-    else -> Color(0xFF8EDBC4)
-}
-
-private fun loadLaunchApps(context: android.content.Context): List<LaunchApp> {
-    val pm = context.packageManager
-    val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-    return pm.queryIntentActivities(intent, 0)
-        .mapNotNull { info ->
-            val packageName = info.activityInfo.packageName
-            if (packageName == context.packageName) null
-            else LaunchApp(info.loadLabel(pm).toString(), packageName, info.loadIcon(pm))
-        }
-        .distinctBy { it.packageName }
-        .sortedBy { it.label.lowercase() }
-}
-
-private fun launch(app: LaunchApp, context: android.content.Context) {
-    context.packageManager.getLaunchIntentForPackage(app.packageName)?.let { context.startActivity(it) }
-}
-
-@Composable
-private fun SettingsPage(gridColumns: Int, onGridColumnsChange: (Int) -> Unit, dockCount: Int, onDockCountChange: (Int) -> Unit, drawerColumns: Int, onDrawerColumnsChange: (Int) -> Unit, iconSize: Int, onIconSizeChange: (Int) -> Unit, labelSize: Int, onLabelSizeChange: (Int) -> Unit, dockIconSize: Int, onDockIconSizeChange: (Int) -> Unit, dockOpacity: Int, onDockOpacityChange: (Int) -> Unit, folderOpacity: Int, onFolderOpacityChange: (Int) -> Unit, folderIconSize: Int, onFolderIconSizeChange: (Int) -> Unit, iconShape: String, onIconShapeChange: (String) -> Unit, accentTheme: String, onAccentThemeChange: (String) -> Unit, showLabels: Boolean, onShowLabelsChange: (Boolean) -> Unit, animationSpeed: Int, onAnimationSpeedChange: (Int) -> Unit, hasWallpaper: Boolean, wallpaperDim: Int, onWallpaperDimChange: (Int) -> Unit, onChooseWallpaper: () -> Unit, onRemoveWallpaper: () -> Unit, onBack: () -> Unit) {
-    Column(Modifier.fillMaxSize().background(Color(0xFF17233D)).statusBarsPadding().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(22.dp)) {
-        Text("‹  Voltar", color = Color.White, fontSize = 16.sp, modifier = Modifier.clickable { onBack() })
-        Spacer(Modifier.height(26.dp))
-        Text("Personalização", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-        Text("Ajuste a experiência da tela inicial", color = Color.White.copy(alpha = .65f), fontSize = 13.sp)
-        Spacer(Modifier.height(24.dp))
-        Text("Grade da tela inicial", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        Text("$gridColumns colunas", color = Color.White.copy(alpha = .68f), fontSize = 12.sp)
-        Slider(
-            value = gridColumns.toFloat(),
-            onValueChange = { onGridColumnsChange(it.roundToInt().coerceIn(3, 6)) },
-            valueRange = 3f..6f,
-            steps = 2
-        )
-        Spacer(Modifier.height(18.dp))
-        Text("Colunas da gaveta", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        Text("$drawerColumns colunas", color = Color.White.copy(alpha = .68f), fontSize = 12.sp)
-        Slider(value = drawerColumns.toFloat(), onValueChange = { onDrawerColumnsChange(it.roundToInt().coerceIn(3, 6)) }, valueRange = 3f..6f, steps = 2)
-        Spacer(Modifier.height(18.dp))
-        Text("Ícones no dock", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        Text("$dockCount aplicativos", color = Color.White.copy(alpha = .68f), fontSize = 12.sp)
-        Slider(value = dockCount.toFloat(), onValueChange = { onDockCountChange(it.roundToInt().coerceIn(1, 5)) }, valueRange = 1f..5f, steps = 3)
-        Spacer(Modifier.height(18.dp))
-        Text("Tamanho dos ícones", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        Text("$iconSize dp", color = Color.White.copy(alpha = .68f), fontSize = 12.sp)
-        Slider(
-            value = iconSize.toFloat(),
-            onValueChange = { onIconSizeChange(it.roundToInt().coerceIn(42, 72)) },
-            valueRange = 42f..72f,
-            steps = 5
-        )
-        Spacer(Modifier.height(18.dp))
-        Text("Tamanho dos ícones do dock", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        Text("$dockIconSize dp", color = Color.White.copy(alpha = .68f), fontSize = 12.sp)
-        Slider(value = dockIconSize.toFloat(), onValueChange = { onDockIconSizeChange(it.roundToInt().coerceIn(32, 54)) }, valueRange = 32f..54f, steps = 10)
-        Spacer(Modifier.height(18.dp))
-        Text("Tamanho dos nomes", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        Text("$labelSize sp", color = Color.White.copy(alpha = .68f), fontSize = 12.sp)
-        Slider(value = labelSize.toFloat(), onValueChange = { onLabelSizeChange(it.roundToInt().coerceIn(8, 14)) }, valueRange = 8f..14f, steps = 5)
-        Spacer(Modifier.height(18.dp))
-        Text("Transparência do dock", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        Text("$dockOpacity%", color = Color.White.copy(alpha = .68f), fontSize = 12.sp)
-        Slider(value = dockOpacity.toFloat(), onValueChange = { onDockOpacityChange(it.roundToInt().coerceIn(8, 35)) }, valueRange = 8f..35f, steps = 8)
-        Spacer(Modifier.height(18.dp))
-        Text("Transparência das pastas", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        Text("$folderOpacity%", color = Color.White.copy(alpha = .68f), fontSize = 12.sp)
-        Slider(value = folderOpacity.toFloat(), onValueChange = { onFolderOpacityChange(it.roundToInt().coerceIn(10, 40)) }, valueRange = 10f..40f, steps = 5)
-        Spacer(Modifier.height(18.dp))
-        Text("Tamanho dos ícones das pastas", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        Text("$folderIconSize dp", color = Color.White.copy(alpha = .68f), fontSize = 12.sp)
-        Slider(value = folderIconSize.toFloat(), onValueChange = { onFolderIconSizeChange(it.roundToInt().coerceIn(44, 72)) }, valueRange = 44f..72f, steps = 6)
-        Spacer(Modifier.height(18.dp))
-        Text("Formato dos ícones", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("squircle" to "ColorOS", "rounded" to "Arredondado", "circle" to "Circular").forEach { (shape, label) ->
-                Surface(color = if (iconShape == shape) Color(0xFF8EDBC4).copy(alpha = .28f) else Color.White.copy(alpha = .09f), shape = RoundedCornerShape(14.dp), modifier = Modifier.weight(1f).clickable { onIconShapeChange(shape) }) {
-                    Text(label, color = Color.White, fontSize = 11.sp, modifier = Modifier.padding(vertical = 12.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                }
-            }
-        }
-        Spacer(Modifier.height(20.dp))
-        Text("Cor de destaque", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        Text("Personalize os detalhes da interface", color = Color.White.copy(alpha = .62f), fontSize = 12.sp)
-        Spacer(Modifier.height(10.dp))
-        listOf(
-            "mint" to "Menta",
-            "blue" to "Azul",
-            "violet" to "Violeta",
-            "pink" to "Rosa",
-            "orange" to "Laranja",
-            "mono" to "Neutro"
-        ).chunked(3).forEach { rowThemes ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                rowThemes.forEach { (theme, label) ->
-                    Column(Modifier.weight(1f).clickable { onAccentThemeChange(theme) }, horizontalAlignment = Alignment.CenterHorizontally) {
-                        Surface(
-                            color = themeAccentColor(theme).copy(alpha = if (accentTheme == theme) 1f else .58f),
-                            shape = CircleShape,
-                            modifier = Modifier.size(34.dp)
-                        ) {}
-                        Spacer(Modifier.height(5.dp))
-                        Text(label, color = Color.White.copy(alpha = if (accentTheme == theme) 1f else .65f), fontSize = 11.sp)
-                    }
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-        }
-        Spacer(Modifier.height(18.dp))
-        Text("Velocidade das animações", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        Text("${animationSpeed}%", color = Color.White.copy(alpha = .68f), fontSize = 12.sp)
-        Slider(value = animationSpeed.toFloat(), onValueChange = { onAnimationSpeedChange(it.roundToInt().coerceIn(60, 150)) }, valueRange = 60f..150f, steps = 8)
-        Spacer(Modifier.height(12.dp))
-        Text("Escurecimento do papel de parede", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        Text("$wallpaperDim%", color = Color.White.copy(alpha = .68f), fontSize = 12.sp)
-        Slider(value = wallpaperDim.toFloat(), onValueChange = { onWallpaperDimChange(it.roundToInt().coerceIn(0, 70)) }, valueRange = 0f..70f, steps = 13)
-        Spacer(Modifier.height(18.dp))
-        Text("Papel de parede", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedButton(onClick = onChooseWallpaper, modifier = Modifier.weight(1f)) {
-                Text(if (hasWallpaper) "Trocar imagem" else "Escolher imagem")
-            }
-            if (hasWallpaper) {
-                TextButton(onClick = onRemoveWallpaper) { Text("Remover") }
-            }
-        }
-        Spacer(Modifier.height(16.dp))
-        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color.White.copy(alpha = .09f)).clickable { onShowLabelsChange(!showLabels) }.padding(horizontal = 16.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("Nomes dos aplicativos", color = Color.White, fontSize = 14.sp)
-                Text("Mostrar nomes abaixo dos ícones", color = Color.White.copy(alpha = .6f), fontSize = 11.sp)
-            }
-            Switch(checked = showLabels, onCheckedChange = onShowLabelsChange)
-        }
-        Spacer(Modifier.height(12.dp))
-        Text("As opções acima são aplicadas à tela inicial e ficam salvas neste dispositivo.", color = Color.White.copy(alpha = .5f), fontSize = 11.sp)
-    }
-}
-
-@Composable
-private fun FolderDialog(
-    title: String,
-    displayName: String,
-    apps: List<LaunchApp>,
-    allApps: List<LaunchApp>,
-    selectedPackages: Set<String>,
-    onToggleApp: (LaunchApp) -> Unit,
-    onLaunch: (LaunchApp) -> Unit,
-    onRename: (String) -> Unit,
-    iconShape: String,
-    canDelete: Boolean,
-    onDelete: () -> Unit,
-    onDismiss: () -> Unit
+private fun SettingsScreen(
+    dark: Boolean, onDark: (Boolean) -> Unit, grid: Int, onGrid: (Int) -> Unit,
+    iconScale: Float, onScale: (Float) -> Unit, labels: Boolean, onLabels: (Boolean) -> Unit,
+    tone: Int, onTone: (Int) -> Unit, onBack: () -> Unit
 ) {
-    var editing by remember { mutableStateOf(false) }
-    var renaming by remember { mutableStateOf(false) }
-    var folderName by remember(displayName) { mutableStateOf(displayName) }
-    var dialogEntered by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { dialogEntered = true }
-    val dialogScale by animateFloatAsState(
-        targetValue = if (dialogEntered) 1f else .88f,
-        animationSpec = spring(dampingRatio = .78f, stiffness = 340f),
-        label = "folder-dialog-scale"
-    )
-    val dialogAlpha by animateFloatAsState(
-        targetValue = if (dialogEntered) 1f else 0f,
-        animationSpec = tween(180),
-        label = "folder-dialog-alpha"
-    )
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            modifier = Modifier.fillMaxWidth()
-                .graphicsLayer { scaleX = dialogScale; scaleY = dialogScale; alpha = dialogAlpha }
-                .animateContentSize(spring(dampingRatio = .82f, stiffness = 380f)),
-            shape = RoundedCornerShape(30.dp),
-            color = Color(0xF226344B),
-            tonalElevation = 12.dp
-        ) {
-            Column(Modifier.padding(20.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(folderName, color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
-                        Text(
-                            if (editing) "Selecione os aplicativos da pasta" else "${apps.size} aplicativos",
-                            color = Color.White.copy(alpha = .62f),
-                            fontSize = 12.sp
-                        )
-                    }
-                    TextButton(onClick = { renaming = !renaming }) { Text(if (renaming) "Voltar" else "Nome", color = Color.White) }
-                    TextButton(onClick = { editing = !editing }) {
-                        Text(if (editing) "Concluir" else "Editar", color = Color.White)
-                    }
-                    if (canDelete) TextButton(onClick = onDelete) { Text("Excluir", color = Color(0xFFFFA0A0)) }
-                }
-                if (renaming) {
-                    OutlinedTextField(value = folderName, onValueChange = { folderName = it.take(24) }, singleLine = true, label = { Text("Nome da pasta") })
-                    TextButton(onClick = { val clean = folderName.trim(); if (clean.isNotEmpty()) onRename(clean); renaming = false }) { Text("Salvar nome", color = Color.White) }
-                }
-                Spacer(Modifier.height(14.dp))
-                if (editing) {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(2),
-                        modifier = Modifier.heightIn(max = 430.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        items(allApps, key = { it.packageName }) { app ->
-                            Row(
-                                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-                                    .clickable { onToggleApp(app) }.padding(horizontal = 4.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Checkbox(
-                                    checked = app.packageName in selectedPackages,
-                                    onCheckedChange = { onToggleApp(app) },
-                                    colors = CheckboxDefaults.colors(
-                                        checkedColor = Color(0xFF8EDBC4),
-                                        uncheckedColor = Color.White.copy(alpha = .65f),
-                                        checkmarkColor = Color(0xFF17233D)
-                                    )
-                                )
-                                Text(
-                                    app.label,
-                                    color = Color.White,
-                                    fontSize = 11.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
-                    }
-                } else if (apps.isEmpty()) {
-                    Text("Esta pasta está vazia. Toque em Editar para adicionar aplicativos.", color = Color.White.copy(alpha = .75f))
-                } else {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(4),
-                        modifier = Modifier.heightIn(max = 390.dp),
-                        verticalArrangement = Arrangement.spacedBy(17.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(apps, key = { it.packageName }) { app ->
-                            AppIcon(app, iconShape = iconShape, onClick = { onLaunch(app); onDismiss() })
-                        }
-                    }
+    val ink = if (dark) Color.White else Color(0xFF20242A)
+    Column(Modifier.fillMaxSize().background(if (dark) Color(0xFF17191D) else Color(0xFFF3F4F6))
+        .statusBarsPadding().navigationBarsPadding().padding(horizontal = 22.dp)) {
+        Row(Modifier.fillMaxWidth().padding(vertical = 22.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("‹", color = ink, fontSize = 34.sp, modifier = Modifier.clickable { onBack() })
+            Spacer(Modifier.width(16.dp))
+            Text("Personalização", color = ink, fontSize = 25.sp, fontWeight = FontWeight.SemiBold)
+        }
+        Text("TELA INICIAL", color = ink.copy(alpha = .55f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        SettingCard("Colunas da tela inicial", ink) {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                (4..5).forEach { n -> FilterChip(grid == n, { onGrid(n) }, label = { Text(n.toString()) }) }
+            }
+        }
+        SettingCard("Tamanho dos ícones", ink) { Slider(iconScale, onScale, valueRange = .85f..1.2f) }
+        SettingCard("Nomes dos aplicativos", ink) { Switch(labels, onLabels) }
+        Spacer(Modifier.height(18.dp))
+        Text("APARÊNCIA", color = ink.copy(alpha = .55f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        SettingCard("Modo escuro", ink) { Switch(dark, onDark) }
+        SettingCard("Papel de parede", ink) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                listOf(Color(0xFFB9CBD9), Color(0xFFE7D8D0), Color(0xFFD8E6D9)).forEachIndexed { index, color ->
+                    Box(Modifier.size(48.dp).clip(RoundedCornerShape(14.dp)).background(color).clickable { onTone(index) })
                 }
             }
         }
+        Spacer(Modifier.height(12.dp))
+        Text("ColorOS 16 • Independent Edition", color = ink.copy(alpha = .5f), fontSize = 11.sp)
     }
+}
+
+@Composable
+private fun SettingCard(title: String, ink: Color, content: @Composable ColumnScope.() -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(vertical = 7.dp).clip(RoundedCornerShape(22.dp))
+        .background(ink.copy(alpha = .055f)).padding(16.dp)) {
+        Text(title, color = ink, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+        Spacer(Modifier.height(8.dp))
+        content()
+    }
+}
+
+private fun drawableBitmap(drawable: Drawable): Bitmap {
+    val width = drawable.intrinsicWidth.coerceAtLeast(1).coerceAtMost(192)
+    val height = drawable.intrinsicHeight.coerceAtLeast(1).coerceAtMost(192)
+    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    drawable.setBounds(0, 0, width, height)
+    drawable.draw(Canvas(bitmap))
+    return bitmap
 }
