@@ -3,7 +3,7 @@
 Launcher Android independente inspirado na linguagem visual do OPPO ColorOS 16. Não é um produto OPPO e não contém código ou recursos proprietários da OPPO.
 
 ## Versão atual
-- Versão: 0.5.2
+- Versão: 0.5.3
 - applicationId: `com.peladagpt.coloros16launcher`
 - Android mínimo: 8.0 (API 26)
 - Alvo de compilação: Android 13 (API 33)
@@ -42,13 +42,17 @@ Para voltar ao launcher anterior, vá em Configurações do Android → Aplicati
 O artefato de Actions é temporário e expira conforme a política de retenção do GitHub. O APK atual é de depuração, não uma versão assinada para distribuição pública.
 
 
-### 0.5.2
+### 0.5.3
 - Tela inicial com múltiplas páginas horizontais, navegação por deslize e indicadores de página. Os aplicativos fixados são distribuídos automaticamente conforme a grade configurada.
 
 
-### 0.5.2
+### 0.5.3
 - A lista de aplicativos é atualizada automaticamente quando apps são instalados, removidos ou atualizados, sem precisar reiniciar o launcher.
 
 
-### 0.5.2
+### 0.5.3
 - Paletas de cor de destaque (menta, azul, violeta, rosa, laranja e neutra), salvas e aplicadas aos detalhes da interface.
+
+
+### 0.5.3
+- Correção de integração da paleta de destaque no indicador de bateria.
