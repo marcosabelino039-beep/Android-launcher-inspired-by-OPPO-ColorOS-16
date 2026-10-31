@@ -1,29 +1,26 @@
-# ColorOS 16 Launcher (community-inspired prototype)
+# ColorOS 16 Launcher — community-inspired prototype
 
-An independent Android launcher prototype inspired by the visual language of OPPO ColorOS 16. This is not an OPPO product and does not include OPPO proprietary code or assets.
+Independent Android launcher inspired by the visual language of OPPO ColorOS 16. This is not an OPPO product and contains no OPPO proprietary code or assets.
 
-## Target
-- Android 8.0+ (minSdk 26)
-- Android 13 / MIUI 14 compatible target for initial testing
+## Target device
+- Redmi Note 10 5G
+- MIUI 14 / Android 13
+- minSdk 26, targetSdk 33
 - Kotlin, Jetpack Compose, Gradle
 
+## Current implementation (prototype stage 0.2)
+- HOME launcher activity, selectable as the default home app
+- Dynamic app discovery and original installed app icons
+- App drawer with live search
+- Animated icon press feedback and animated screen transitions
+- ColorOS-inspired dark glass visual language, gradient lighting and translucent cards
+- Clock/date panel and visual smart-widget placeholders
+- Folder tile visual prototype
+- Personalization/settings preview for grid, icon shape, size, animation, depth, blur and gestures
+- Swipe up/down gesture to open/close the app drawer
+
+## Important limitations
+This is an independent launcher, not a full ColorOS system port. At this stage, folder editing/drag-and-drop, persistent layout settings, real AppWidgetHost integration, full system blur, lock-screen/control-center replacement, and advanced 3D physics are not implemented yet. Android and MIUI control some system animations and surfaces, so a third-party launcher cannot reproduce every proprietary ColorOS behavior exactly.
+
 ## Build
-The GitHub Actions workflow builds a debug APK on every push to `main` or `master`, and can also be started manually from the Actions tab.
-
-## Current prototype features
-- HOME launcher intent (can be selected as the default home app)
-- Dark gradient home screen with translucent surfaces
-- App drawer populated from launchable apps
-- App search
-- Initial visual folder tiles and favorite placeholders
-
-## Planned next stages
-- Real draggable home-screen icons and folders
-- App icon rendering and adaptive icon support
-- Persistent grid and icon-size settings
-- Widgets through Android AppWidgetHost
-- Blur/transparency tuning for Android 13
-- Gesture navigation and polished transitions
-- Folder editing and 3D-inspired effects
-
-This is a starter build, not yet a full ColorOS recreation. Some system-level OPPO animations and integrations cannot be reproduced by a third-party launcher.
+The GitHub Actions workflow builds a debug APK on pushes to `main` and uploads it as the `ColorOS16-Launcher-APK` artifact. It can also be started manually from the Actions tab.
