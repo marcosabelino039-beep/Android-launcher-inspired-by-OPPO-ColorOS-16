@@ -20,6 +20,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -81,6 +82,8 @@ private fun ColorOSLauncher() {
     var settings by remember { mutableStateOf(false) }
     var gridColumns by remember { mutableIntStateOf(context.getSharedPreferences("launcher_prefs", 0).getInt("grid_columns", 4)) }
     var clock by remember { mutableStateOf("") }
+    var selectedApp by remember { mutableStateOf<LaunchApp?>(null) }
+    var pinnedPackages by remember { mutableStateOf(context.getSharedPreferences("launcher_prefs", 0).getStringSet("pinned_apps", emptySet())?.toSet() ?: emptySet()) }
 
     LaunchedEffect(Unit) {
         val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
@@ -98,7 +101,10 @@ private fun ColorOSLauncher() {
         }
     }
 
-    val favorites = remember(apps) { apps.filter { it.packageName != context.packageName }.take(4) }
+    val favorites = remember(apps, pinnedPackages) {
+        val chosen = apps.filter { it.packageName in pinnedPackages }
+        if (chosen.isNotEmpty()) chosen else apps.take(4)
+    }
     val filtered = remember(apps, search) {
         if (search.isBlank()) apps else apps.filter { it.label.contains(search, true) }
     }
@@ -159,7 +165,7 @@ private fun ColorOSLauncher() {
                     }
                     Spacer(Modifier.height(15.dp))
                     LazyVerticalGrid(columns = GridCells.Fixed(gridColumns), modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(17.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(favorites) { app -> AppIcon(app) { launch(app, context) } }
+                        items(favorites) { app -> AppIcon(app, onClick = { launch(app, context) }, onLongClick = { selectedApp = app }) }
                         item { FolderIcon { folderTitle = "Social" } }
                         item { FolderIcon(label = "Ferramentas") { folderTitle = "Ferramentas" } }
                     }
@@ -183,10 +189,28 @@ private fun ColorOSLauncher() {
                 OutlinedTextField(value = search, onValueChange = { search = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text("Pesquisar aplicativos") }, leadingIcon = { Icon(Icons.Rounded.Search, null) }, singleLine = true, shape = RoundedCornerShape(22.dp), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = Color.White.copy(alpha = .6f), unfocusedBorderColor = Color.White.copy(alpha = .2f), focusedLeadingIconColor = Color.White, unfocusedLeadingIconColor = Color.White, focusedPlaceholderColor = Color.White.copy(alpha = .5f), unfocusedPlaceholderColor = Color.White.copy(alpha = .5f)))
                 Spacer(Modifier.height(18.dp))
                 LazyVerticalGrid(columns = GridCells.Fixed(4), verticalArrangement = Arrangement.spacedBy(20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(filtered, key = { it.packageName }) { app -> AppIcon(app) { launch(app, context); drawer = false } }
+                    items(filtered, key = { it.packageName }) { app -> AppIcon(app, onClick = { launch(app, context); drawer = false }, onLongClick = { selectedApp = app }) }
                 }
             }
         }
+    }
+
+    selectedApp?.let { app ->
+        val isPinned = app.packageName in pinnedPackages
+        AlertDialog(
+            onDismissRequest = { selectedApp = null },
+            title = { Text(app.label) },
+            text = { Text(if (isPinned) "Este aplicativo está na tela inicial." else "Adicionar este aplicativo à tela inicial?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    val next = if (isPinned) pinnedPackages - app.packageName else pinnedPackages + app.packageName
+                    pinnedPackages = next
+                    context.getSharedPreferences("launcher_prefs", 0).edit().putStringSet("pinned_apps", next).apply()
+                    selectedApp = null
+                }) { Text(if (isPinned) "Remover da tela inicial" else "Adicionar") }
+            },
+            dismissButton = { TextButton(onClick = { selectedApp = null }) { Text("Cancelar") } }
+        )
     }
 
     folderTitle?.let { title ->
@@ -210,18 +234,18 @@ private fun WidgetTile(title: String, subtitle: String, modifier: Modifier = Mod
 }
 
 @Composable
-private fun AppIcon(app: LaunchApp, onClick: () -> Unit) {
+private fun AppIcon(app: LaunchApp, onClick: () -> Unit, onLongClick: () -> Unit = {}) {
     val scope = rememberCoroutineScope()
     var pressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(if (pressed) .86f else 1f, spring(dampingRatio = .42f, stiffness = 420f), label = "icon-press")
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().scale(scale).clickable {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().scale(scale).combinedClickable(onClick = {
         scope.launch {
             pressed = true
             delay(85)
             pressed = false
             onClick()
         }
-    }) {
+    }, onLongClick = onLongClick)) {
         AppArtwork(app.icon, Modifier.size(54.dp))
         Spacer(Modifier.height(6.dp))
         Text(app.label, color = Color.White, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
