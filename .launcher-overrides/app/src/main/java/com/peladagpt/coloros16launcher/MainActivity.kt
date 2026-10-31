@@ -585,9 +585,23 @@ private fun FolderDialog(
     var editing by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf(false) }
     var folderName by remember(displayName) { mutableStateOf(displayName) }
+    var dialogEntered by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { dialogEntered = true }
+    val dialogScale by animateFloatAsState(
+        targetValue = if (dialogEntered) 1f else .88f,
+        animationSpec = spring(dampingRatio = .78f, stiffness = 340f),
+        label = "folder-dialog-scale"
+    )
+    val dialogAlpha by animateFloatAsState(
+        targetValue = if (dialogEntered) 1f else 0f,
+        animationSpec = tween(180),
+        label = "folder-dialog-alpha"
+    )
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            modifier = Modifier.fillMaxWidth().animateContentSize(spring(dampingRatio = .82f, stiffness = 380f)),
+            modifier = Modifier.fillMaxWidth()
+                .graphicsLayer { scaleX = dialogScale; scaleY = dialogScale; alpha = dialogAlpha }
+                .animateContentSize(spring(dampingRatio = .82f, stiffness = 380f)),
             shape = RoundedCornerShape(30.dp),
             color = Color(0xF226344B),
             tonalElevation = 12.dp
