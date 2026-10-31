@@ -243,7 +243,7 @@ private fun ColorOSLauncher() {
                         Spacer(Modifier.height(10.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             WidgetTile("Clima", "Adicione uma cidade", Modifier.weight(1f))
-                            BatteryTile(Modifier.weight(1f))
+                            BatteryTile(accentTheme, Modifier.weight(1f))
                         }
                     }
 
@@ -439,7 +439,7 @@ private fun ColorOSLauncher() {
 }
 
 @Composable
-private fun BatteryTile(modifier: Modifier = Modifier) {
+private fun BatteryTile(accentTheme: String, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     var percent by remember { mutableIntStateOf(-1) }
     var charging by remember { mutableStateOf(false) }
