@@ -192,8 +192,8 @@ private fun ColorOSHome() {
             }
         }
 
-        AnimatedVisibility(drawer, enter = fadeIn() + slideInVertically { it / 3 } + scaleIn(.96f),
-            exit = fadeOut() + slideOutVertically { it / 4 } + scaleOut(.98f), modifier = Modifier.fillMaxSize()) {
+        AnimatedVisibility(drawer, enter = fadeIn() + slideInVertically { it / 3 } + scaleIn(initialScale = .96f),
+            exit = fadeOut() + slideOutVertically { it / 4 } + scaleOut(targetScale = .98f), modifier = Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize().background(if (dark) Color(0xF21A1C20) else Color(0xF2F3F4F6))
                 .statusBarsPadding().navigationBarsPadding().padding(horizontal = 22.dp)) {
                 Row(Modifier.fillMaxWidth().padding(top = 22.dp, bottom = 18.dp), verticalAlignment = Alignment.CenterVertically) {
