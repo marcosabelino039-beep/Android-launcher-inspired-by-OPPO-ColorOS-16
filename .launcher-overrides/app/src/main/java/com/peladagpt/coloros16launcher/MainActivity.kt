@@ -96,6 +96,7 @@ private fun ColorOSLauncher() {
     var settings by remember { mutableStateOf(false) }
     var gridColumns by remember { mutableIntStateOf(context.getSharedPreferences("launcher_prefs", 0).getInt("grid_columns", 4)) }
     var dockCount by remember { mutableIntStateOf(context.getSharedPreferences("launcher_prefs", 0).getInt("dock_count", 3).coerceIn(1, 5)) }
+    var drawerColumns by remember { mutableIntStateOf(context.getSharedPreferences("launcher_prefs", 0).getInt("drawer_columns", 4).coerceIn(3, 6)) }
     var homeIconSize by remember { mutableIntStateOf(context.getSharedPreferences("launcher_prefs", 0).getInt("home_icon_size", 54).coerceIn(42, 72)) }
     var iconShape by remember { mutableStateOf(context.getSharedPreferences("launcher_prefs", 0).getString("icon_shape", "squircle") ?: "squircle") }
     var showHomeLabels by remember { mutableStateOf(context.getSharedPreferences("launcher_prefs", 0).getBoolean("show_home_labels", true)) }
@@ -171,7 +172,7 @@ private fun ColorOSLauncher() {
             label = "main-screen"
         ) { showSettings ->
             if (showSettings) {
-                SettingsPage(gridColumns = gridColumns, onGridColumnsChange = { columns -> gridColumns = columns; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("grid_columns", columns).apply() }, dockCount = dockCount, onDockCountChange = { count -> dockCount = count; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("dock_count", count).apply() }, iconSize = homeIconSize, onIconSizeChange = { size -> homeIconSize = size; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("home_icon_size", size).apply() }, iconShape = iconShape, onIconShapeChange = { shape -> iconShape = shape; context.getSharedPreferences("launcher_prefs", 0).edit().putString("icon_shape", shape).apply() }, showLabels = showHomeLabels, onShowLabelsChange = { enabled -> showHomeLabels = enabled; context.getSharedPreferences("launcher_prefs", 0).edit().putBoolean("show_home_labels", enabled).apply() }, animationSpeed = animationSpeed, onAnimationSpeedChange = { speed -> animationSpeed = speed; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("animation_speed", speed).apply() }, hasWallpaper = wallpaperUri != null, onChooseWallpaper = { wallpaperPicker.launch(arrayOf("image/*")) }, onRemoveWallpaper = { wallpaperUri = null; context.getSharedPreferences("launcher_prefs", 0).edit().remove("wallpaper_uri").apply() }, onBack = { settings = false })
+                SettingsPage(gridColumns = gridColumns, onGridColumnsChange = { columns -> gridColumns = columns; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("grid_columns", columns).apply() }, dockCount = dockCount, onDockCountChange = { count -> dockCount = count; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("dock_count", count).apply() }, drawerColumns = drawerColumns, onDrawerColumnsChange = { count -> drawerColumns = count; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("drawer_columns", count).apply() }, iconSize = homeIconSize, onIconSizeChange = { size -> homeIconSize = size; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("home_icon_size", size).apply() }, iconShape = iconShape, onIconShapeChange = { shape -> iconShape = shape; context.getSharedPreferences("launcher_prefs", 0).edit().putString("icon_shape", shape).apply() }, showLabels = showHomeLabels, onShowLabelsChange = { enabled -> showHomeLabels = enabled; context.getSharedPreferences("launcher_prefs", 0).edit().putBoolean("show_home_labels", enabled).apply() }, animationSpeed = animationSpeed, onAnimationSpeedChange = { speed -> animationSpeed = speed; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("animation_speed", speed).apply() }, hasWallpaper = wallpaperUri != null, onChooseWallpaper = { wallpaperPicker.launch(arrayOf("image/*")) }, onRemoveWallpaper = { wallpaperUri = null; context.getSharedPreferences("launcher_prefs", 0).edit().remove("wallpaper_uri").apply() }, onBack = { settings = false })
             } else {
                 Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 22.dp)) {
                     Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -246,7 +247,7 @@ private fun ColorOSLauncher() {
                 }
                 OutlinedTextField(value = search, onValueChange = { search = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text("Pesquisar aplicativos") }, leadingIcon = { Icon(Icons.Rounded.Search, null) }, singleLine = true, shape = RoundedCornerShape(22.dp), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = Color.White.copy(alpha = .6f), unfocusedBorderColor = Color.White.copy(alpha = .2f), focusedLeadingIconColor = Color.White, unfocusedLeadingIconColor = Color.White, focusedPlaceholderColor = Color.White.copy(alpha = .5f), unfocusedPlaceholderColor = Color.White.copy(alpha = .5f)))
                 Spacer(Modifier.height(18.dp))
-                LazyVerticalGrid(columns = GridCells.Fixed(4), verticalArrangement = Arrangement.spacedBy(20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                LazyVerticalGrid(columns = GridCells.Fixed(drawerColumns), verticalArrangement = Arrangement.spacedBy(20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(filtered, key = { it.packageName }) { app -> AppIcon(app, iconShape = iconShape, onClick = { launch(app, context); drawer = false }, onLongClick = { selectedApp = app }) }
                 }
             }
@@ -473,7 +474,7 @@ private fun launch(app: LaunchApp, context: android.content.Context) {
 }
 
 @Composable
-private fun SettingsPage(gridColumns: Int, onGridColumnsChange: (Int) -> Unit, dockCount: Int, onDockCountChange: (Int) -> Unit, iconSize: Int, onIconSizeChange: (Int) -> Unit, iconShape: String, onIconShapeChange: (String) -> Unit, showLabels: Boolean, onShowLabelsChange: (Boolean) -> Unit, animationSpeed: Int, onAnimationSpeedChange: (Int) -> Unit, hasWallpaper: Boolean, onChooseWallpaper: () -> Unit, onRemoveWallpaper: () -> Unit, onBack: () -> Unit) {
+private fun SettingsPage(gridColumns: Int, onGridColumnsChange: (Int) -> Unit, dockCount: Int, onDockCountChange: (Int) -> Unit, drawerColumns: Int, onDrawerColumnsChange: (Int) -> Unit, iconSize: Int, onIconSizeChange: (Int) -> Unit, iconShape: String, onIconShapeChange: (String) -> Unit, showLabels: Boolean, onShowLabelsChange: (Boolean) -> Unit, animationSpeed: Int, onAnimationSpeedChange: (Int) -> Unit, hasWallpaper: Boolean, onChooseWallpaper: () -> Unit, onRemoveWallpaper: () -> Unit, onBack: () -> Unit) {
     Column(Modifier.fillMaxSize().background(Color(0xFF17233D)).statusBarsPadding().navigationBarsPadding().padding(22.dp)) {
         Text("‹  Voltar", color = Color.White, fontSize = 16.sp, modifier = Modifier.clickable { onBack() })
         Spacer(Modifier.height(26.dp))
@@ -488,6 +489,10 @@ private fun SettingsPage(gridColumns: Int, onGridColumnsChange: (Int) -> Unit, d
             valueRange = 3f..6f,
             steps = 2
         )
+        Spacer(Modifier.height(18.dp))
+        Text("Colunas da gaveta", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Text("$drawerColumns colunas", color = Color.White.copy(alpha = .68f), fontSize = 12.sp)
+        Slider(value = drawerColumns.toFloat(), onValueChange = { onDrawerColumnsChange(it.roundToInt().coerceIn(3, 6)) }, valueRange = 3f..6f, steps = 2)
         Spacer(Modifier.height(18.dp))
         Text("Ícones no dock", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         Text("$dockCount aplicativos", color = Color.White.copy(alpha = .68f), fontSize = 12.sp)
