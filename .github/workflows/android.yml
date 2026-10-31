@@ -22,6 +22,7 @@ jobs:
           mkdir -p /tmp/coloros-project
           unzip -o ColorOS16-Launcher-project.zip -d /tmp/coloros-project
           cp -r /tmp/coloros-project/. .
+          cp -r .launcher-overrides/. .
 
       - name: Setup Java
         uses: actions/setup-java@v4
