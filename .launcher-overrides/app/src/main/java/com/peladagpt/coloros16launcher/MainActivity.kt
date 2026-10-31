@@ -315,6 +315,13 @@ private fun ColorOSLauncher() {
             onRename = { newName ->
                 if (title == "Social") { socialFolderName = newName; prefs.edit().putString("folder_name_Social", newName).apply() }
                 else if (title == "Ferramentas") { toolsFolderName = newName; prefs.edit().putString("folder_name_Ferramentas", newName).apply() }
+                else if (title in customFolders && newName !in customFolders) {
+                    customFolders = customFolders.map { if (it == title) newName else it }
+                    prefs.edit().putStringSet("custom_folders", customFolders.toSet())
+                        .putStringSet("folder_apps_" + newName, selectedPackages)
+                        .remove(prefKey).apply()
+                    folderTitle = null
+                }
             },
             canDelete = title in customFolders,
             onDelete = {
