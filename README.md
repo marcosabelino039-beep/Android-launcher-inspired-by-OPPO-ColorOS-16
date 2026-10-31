@@ -15,7 +15,9 @@ Independent Android launcher inspired by the visual language of OPPO ColorOS 16.
 - Animated icon press feedback and animated screen transitions
 - ColorOS-inspired dark glass visual language, gradient lighting and translucent cards
 - Clock/date panel and visual smart-widget placeholders
-- Folder tile visual prototype
+- Interactive app folders with category-based app grouping and launch actions
+- Persistent home-screen grid setting (3–6 columns)
+- Spring-based icon press feedback and animated transitions
 - Personalization/settings preview for grid, icon shape, size, animation, depth, blur and gestures
 - Swipe up/down gesture to open/close the app drawer
 
