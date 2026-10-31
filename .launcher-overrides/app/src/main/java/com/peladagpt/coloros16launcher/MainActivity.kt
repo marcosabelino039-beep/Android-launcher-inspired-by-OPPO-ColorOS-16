@@ -109,6 +109,7 @@ private fun ColorOSLauncher() {
     var dockOpacity by remember { mutableIntStateOf(context.getSharedPreferences("launcher_prefs", 0).getInt("dock_opacity", 15).coerceIn(8, 35)) }
     var folderIconSize by remember { mutableIntStateOf(context.getSharedPreferences("launcher_prefs", 0).getInt("folder_icon_size", 54).coerceIn(44, 72)) }
     var iconShape by remember { mutableStateOf(context.getSharedPreferences("launcher_prefs", 0).getString("icon_shape", "squircle") ?: "squircle") }
+    var accentTheme by remember { mutableStateOf(context.getSharedPreferences("launcher_prefs", 0).getString("accent_theme", "mint") ?: "mint") }
     var showHomeLabels by remember { mutableStateOf(context.getSharedPreferences("launcher_prefs", 0).getBoolean("show_home_labels", true)) }
     var animationSpeed by remember { mutableIntStateOf(context.getSharedPreferences("launcher_prefs", 0).getInt("animation_speed", 100).coerceIn(60, 150)) }
     var clock by remember { mutableStateOf("") }
@@ -214,7 +215,7 @@ private fun ColorOSLauncher() {
             label = "main-screen"
         ) { showSettings ->
             if (showSettings) {
-                SettingsPage(gridColumns = gridColumns, onGridColumnsChange = { columns -> gridColumns = columns; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("grid_columns", columns).apply() }, dockCount = dockCount, onDockCountChange = { count -> dockCount = count; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("dock_count", count).apply() }, drawerColumns = drawerColumns, onDrawerColumnsChange = { count -> drawerColumns = count; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("drawer_columns", count).apply() }, iconSize = homeIconSize, onIconSizeChange = { size -> homeIconSize = size; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("home_icon_size", size).apply() }, dockIconSize = dockIconSize, onDockIconSizeChange = { size -> dockIconSize = size; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("dock_icon_size", size).apply() }, labelSize = homeLabelSize, onLabelSizeChange = { size -> homeLabelSize = size; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("home_label_size", size).apply() }, folderOpacity = folderOpacity, onFolderOpacityChange = { value -> folderOpacity = value; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("folder_opacity", value).apply() }, dockOpacity = dockOpacity, onDockOpacityChange = { value -> dockOpacity = value; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("dock_opacity", value).apply() }, folderIconSize = folderIconSize, onFolderIconSizeChange = { value -> folderIconSize = value; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("folder_icon_size", value).apply() }, iconShape = iconShape, onIconShapeChange = { shape -> iconShape = shape; context.getSharedPreferences("launcher_prefs", 0).edit().putString("icon_shape", shape).apply() }, showLabels = showHomeLabels, onShowLabelsChange = { enabled -> showHomeLabels = enabled; context.getSharedPreferences("launcher_prefs", 0).edit().putBoolean("show_home_labels", enabled).apply() }, animationSpeed = animationSpeed, onAnimationSpeedChange = { speed -> animationSpeed = speed; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("animation_speed", speed).apply() }, hasWallpaper = wallpaperUri != null, wallpaperDim = wallpaperDim, onWallpaperDimChange = { value -> wallpaperDim = value; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("wallpaper_dim", value).apply() }, onChooseWallpaper = { wallpaperPicker.launch(arrayOf("image/*")) }, onRemoveWallpaper = { wallpaperUri = null; context.getSharedPreferences("launcher_prefs", 0).edit().remove("wallpaper_uri").apply() }, onBack = { settings = false })
+                SettingsPage(gridColumns = gridColumns, onGridColumnsChange = { columns -> gridColumns = columns; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("grid_columns", columns).apply() }, dockCount = dockCount, onDockCountChange = { count -> dockCount = count; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("dock_count", count).apply() }, drawerColumns = drawerColumns, onDrawerColumnsChange = { count -> drawerColumns = count; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("drawer_columns", count).apply() }, iconSize = homeIconSize, onIconSizeChange = { size -> homeIconSize = size; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("home_icon_size", size).apply() }, dockIconSize = dockIconSize, onDockIconSizeChange = { size -> dockIconSize = size; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("dock_icon_size", size).apply() }, labelSize = homeLabelSize, onLabelSizeChange = { size -> homeLabelSize = size; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("home_label_size", size).apply() }, folderOpacity = folderOpacity, onFolderOpacityChange = { value -> folderOpacity = value; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("folder_opacity", value).apply() }, dockOpacity = dockOpacity, onDockOpacityChange = { value -> dockOpacity = value; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("dock_opacity", value).apply() }, folderIconSize = folderIconSize, onFolderIconSizeChange = { value -> folderIconSize = value; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("folder_icon_size", value).apply() }, iconShape = iconShape, onIconShapeChange = { shape -> iconShape = shape; context.getSharedPreferences("launcher_prefs", 0).edit().putString("icon_shape", shape).apply() }, accentTheme = accentTheme, onAccentThemeChange = { theme -> accentTheme = theme; context.getSharedPreferences("launcher_prefs", 0).edit().putString("accent_theme", theme).apply() }, showLabels = showHomeLabels, onShowLabelsChange = { enabled -> showHomeLabels = enabled; context.getSharedPreferences("launcher_prefs", 0).edit().putBoolean("show_home_labels", enabled).apply() }, animationSpeed = animationSpeed, onAnimationSpeedChange = { speed -> animationSpeed = speed; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("animation_speed", speed).apply() }, hasWallpaper = wallpaperUri != null, wallpaperDim = wallpaperDim, onWallpaperDimChange = { value -> wallpaperDim = value; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("wallpaper_dim", value).apply() }, onChooseWallpaper = { wallpaperPicker.launch(arrayOf("image/*")) }, onRemoveWallpaper = { wallpaperUri = null; context.getSharedPreferences("launcher_prefs", 0).edit().remove("wallpaper_uri").apply() }, onBack = { settings = false })
             } else {
                 Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 22.dp)) {
                     Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -222,7 +223,7 @@ private fun ColorOSLauncher() {
                             Text("ColorOS", color = Color.White.copy(alpha = .78f), fontSize = 13.sp, fontWeight = FontWeight.Medium)
                             Text("16", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                         }
-                        Surface(color = Color.White.copy(alpha = .13f), shape = CircleShape, modifier = Modifier.size(42.dp).clickable { settings = true }) {
+                        Surface(color = themeAccentColor(accentTheme).copy(alpha = .24f), shape = CircleShape, modifier = Modifier.size(42.dp).clickable { settings = true }) {
                             Icon(Icons.Rounded.Settings, null, tint = Color.White, modifier = Modifier.padding(10.dp))
                         }
                     }
@@ -463,7 +464,7 @@ private fun BatteryTile(modifier: Modifier = Modifier) {
         Spacer(Modifier.height(9.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.weight(1f).height(7.dp).clip(CircleShape).background(Color.White.copy(alpha = .18f))) {
-                Box(Modifier.fillMaxWidth(if (percent >= 0) percent / 100f else 0f).fillMaxHeight().clip(CircleShape).background(Color(0xFF9DE6C1)))
+                Box(Modifier.fillMaxWidth(if (percent >= 0) percent / 100f else 0f).fillMaxHeight().clip(CircleShape).background(themeAccentColor(accentTheme)))
             }
             Spacer(Modifier.width(8.dp))
             Text(if (percent >= 0) "$percent%" else "--", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
@@ -545,6 +546,15 @@ private fun AppArtwork(drawable: Drawable, modifier: Modifier = Modifier, iconSh
     Image(bitmap, null, modifier.clip(shape))
 }
 
+private fun themeAccentColor(theme: String): Color = when (theme) {
+    "blue" -> Color(0xFF8FC7FF)
+    "violet" -> Color(0xFFC4A5FF)
+    "pink" -> Color(0xFFFFA6C9)
+    "orange" -> Color(0xFFFFBE83)
+    "mono" -> Color(0xFFD0D5DD)
+    else -> Color(0xFF8EDBC4)
+}
+
 private fun loadLaunchApps(context: android.content.Context): List<LaunchApp> {
     val pm = context.packageManager
     val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
@@ -563,7 +573,7 @@ private fun launch(app: LaunchApp, context: android.content.Context) {
 }
 
 @Composable
-private fun SettingsPage(gridColumns: Int, onGridColumnsChange: (Int) -> Unit, dockCount: Int, onDockCountChange: (Int) -> Unit, drawerColumns: Int, onDrawerColumnsChange: (Int) -> Unit, iconSize: Int, onIconSizeChange: (Int) -> Unit, labelSize: Int, onLabelSizeChange: (Int) -> Unit, dockIconSize: Int, onDockIconSizeChange: (Int) -> Unit, dockOpacity: Int, onDockOpacityChange: (Int) -> Unit, folderOpacity: Int, onFolderOpacityChange: (Int) -> Unit, folderIconSize: Int, onFolderIconSizeChange: (Int) -> Unit, iconShape: String, onIconShapeChange: (String) -> Unit, showLabels: Boolean, onShowLabelsChange: (Boolean) -> Unit, animationSpeed: Int, onAnimationSpeedChange: (Int) -> Unit, hasWallpaper: Boolean, wallpaperDim: Int, onWallpaperDimChange: (Int) -> Unit, onChooseWallpaper: () -> Unit, onRemoveWallpaper: () -> Unit, onBack: () -> Unit) {
+private fun SettingsPage(gridColumns: Int, onGridColumnsChange: (Int) -> Unit, dockCount: Int, onDockCountChange: (Int) -> Unit, drawerColumns: Int, onDrawerColumnsChange: (Int) -> Unit, iconSize: Int, onIconSizeChange: (Int) -> Unit, labelSize: Int, onLabelSizeChange: (Int) -> Unit, dockIconSize: Int, onDockIconSizeChange: (Int) -> Unit, dockOpacity: Int, onDockOpacityChange: (Int) -> Unit, folderOpacity: Int, onFolderOpacityChange: (Int) -> Unit, folderIconSize: Int, onFolderIconSizeChange: (Int) -> Unit, iconShape: String, onIconShapeChange: (String) -> Unit, accentTheme: String, onAccentThemeChange: (String) -> Unit, showLabels: Boolean, onShowLabelsChange: (Boolean) -> Unit, animationSpeed: Int, onAnimationSpeedChange: (Int) -> Unit, hasWallpaper: Boolean, wallpaperDim: Int, onWallpaperDimChange: (Int) -> Unit, onChooseWallpaper: () -> Unit, onRemoveWallpaper: () -> Unit, onBack: () -> Unit) {
     Column(Modifier.fillMaxSize().background(Color(0xFF17233D)).statusBarsPadding().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(22.dp)) {
         Text("‹  Voltar", color = Color.White, fontSize = 16.sp, modifier = Modifier.clickable { onBack() })
         Spacer(Modifier.height(26.dp))
@@ -623,6 +633,33 @@ private fun SettingsPage(gridColumns: Int, onGridColumnsChange: (Int) -> Unit, d
                     Text(label, color = Color.White, fontSize = 11.sp, modifier = Modifier.padding(vertical = 12.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 }
             }
+        }
+        Spacer(Modifier.height(20.dp))
+        Text("Cor de destaque", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Text("Personalize os detalhes da interface", color = Color.White.copy(alpha = .62f), fontSize = 12.sp)
+        Spacer(Modifier.height(10.dp))
+        listOf(
+            "mint" to "Menta",
+            "blue" to "Azul",
+            "violet" to "Violeta",
+            "pink" to "Rosa",
+            "orange" to "Laranja",
+            "mono" to "Neutro"
+        ).chunked(3).forEach { rowThemes ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                rowThemes.forEach { (theme, label) ->
+                    Column(Modifier.weight(1f).clickable { onAccentThemeChange(theme) }, horizontalAlignment = Alignment.CenterHorizontally) {
+                        Surface(
+                            color = themeAccentColor(theme).copy(alpha = if (accentTheme == theme) 1f else .58f),
+                            shape = CircleShape,
+                            modifier = Modifier.size(34.dp)
+                        ) {}
+                        Spacer(Modifier.height(5.dp))
+                        Text(label, color = Color.White.copy(alpha = if (accentTheme == theme) 1f else .65f), fontSize = 11.sp)
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
         }
         Spacer(Modifier.height(18.dp))
         Text("Velocidade das animações", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
