@@ -52,6 +52,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.roundToInt
 
 private data class LaunchApp(val label: String, val packageName: String, val icon: Drawable)
 
@@ -78,6 +79,7 @@ private fun ColorOSLauncher() {
     var search by remember { mutableStateOf("") }
     var folderTitle by remember { mutableStateOf<String?>(null) }
     var settings by remember { mutableStateOf(false) }
+    var gridColumns by remember { mutableIntStateOf(context.getSharedPreferences("launcher_prefs", 0).getInt("grid_columns", 4)) }
     var clock by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
@@ -118,7 +120,7 @@ private fun ColorOSLauncher() {
 
         AnimatedContent(targetState = settings, label = "main-screen") { showSettings ->
             if (showSettings) {
-                SettingsPage(onBack = { settings = false })
+                SettingsPage(gridColumns = gridColumns, onGridColumnsChange = { columns -> gridColumns = columns; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("grid_columns", columns).apply() }, onBack = { settings = false })
             } else {
                 Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 22.dp)) {
                     Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -156,7 +158,7 @@ private fun ColorOSLauncher() {
                         Text("Editar", color = Color.White.copy(alpha = .7f), fontSize = 12.sp, modifier = Modifier.clickable { settings = true })
                     }
                     Spacer(Modifier.height(15.dp))
-                    LazyVerticalGrid(columns = GridCells.Fixed(4), modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(17.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    LazyVerticalGrid(columns = GridCells.Fixed(gridColumns), modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(17.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(favorites) { app -> AppIcon(app) { launch(app, context) } }
                         item { FolderIcon { folderTitle = "Social" } }
                         item { FolderIcon(label = "Ferramentas") { folderTitle = "Ferramentas" } }
@@ -268,21 +270,30 @@ private fun launch(app: LaunchApp, context: android.content.Context) {
 }
 
 @Composable
-private fun SettingsPage(onBack: () -> Unit) {
+private fun SettingsPage(gridColumns: Int, onGridColumnsChange: (Int) -> Unit, onBack: () -> Unit) {
     Column(Modifier.fillMaxSize().background(Color(0xFF17233D)).statusBarsPadding().navigationBarsPadding().padding(22.dp)) {
         Text("‹  Voltar", color = Color.White, fontSize = 16.sp, modifier = Modifier.clickable { onBack() })
         Spacer(Modifier.height(26.dp))
         Text("Personalização", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
         Text("Ajuste a experiência da tela inicial", color = Color.White.copy(alpha = .65f), fontSize = 13.sp)
         Spacer(Modifier.height(24.dp))
-        listOf("Grade da tela inicial" to "4 × 5", "Formato dos ícones" to "Arredondado", "Tamanho dos ícones" to "Padrão", "Animações" to "Fluidas", "Efeito de profundidade" to "Ativado", "Desfoque e transparência" to "Vidro fosco", "Gestos" to "Deslizar para abrir a gaveta", "Widgets" to "Espaço inteligente").forEach { (title, value) ->
+        Text("Grade da tela inicial", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Text("$gridColumns colunas", color = Color.White.copy(alpha = .68f), fontSize = 12.sp)
+        Slider(
+            value = gridColumns.toFloat(),
+            onValueChange = { onGridColumnsChange(it.roundToInt().coerceIn(3, 6)) },
+            valueRange = 3f..6f,
+            steps = 2
+        )
+        Spacer(Modifier.height(12.dp))
+        listOf("Formato dos ícones" to "Arredondado", "Tamanho dos ícones" to "Padrão", "Animações" to "Fluidas", "Efeito de profundidade" to "Ativado", "Desfoque e transparência" to "Vidro fosco", "Gestos" to "Deslizar para abrir a gaveta", "Widgets" to "Espaço inteligente").forEach { (title, value) ->
             Row(Modifier.fillMaxWidth().padding(vertical = 10.dp).clip(RoundedCornerShape(18.dp)).background(Color.White.copy(alpha = .09f)).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(title, color = Color.White, modifier = Modifier.weight(1f), fontSize = 14.sp)
                 Text(value, color = Color.White.copy(alpha = .65f), fontSize = 12.sp)
             }
         }
         Spacer(Modifier.height(12.dp))
-        Text("Algumas opções são prévias visuais; os controles reais serão ligados às próximas versões.", color = Color.White.copy(alpha = .5f), fontSize = 11.sp)
+        Text("A quantidade de colunas é aplicada imediatamente e salva neste dispositivo. As demais opções ainda são prévias visuais.", color = Color.White.copy(alpha = .5f), fontSize = 11.sp)
     }
 }
 
