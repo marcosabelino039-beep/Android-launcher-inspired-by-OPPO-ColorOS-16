@@ -176,7 +176,7 @@ private fun ColorOSLauncher() {
                         Spacer(Modifier.height(10.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             WidgetTile("Clima", "Adicione uma cidade", Modifier.weight(1f))
-                            WidgetTile("Bateria", "Nível do dispositivo", Modifier.weight(1f))
+                            BatteryTile(Modifier.weight(1f))
                         }
                     }
 
@@ -243,6 +243,40 @@ private fun ColorOSLauncher() {
                 .ifEmpty { apps.take(12) }
         }
         FolderDialog(title = title, apps = folderApps, onLaunch = { app -> launch(app, context) }, onDismiss = { folderTitle = null })
+    }
+}
+
+@Composable
+private fun BatteryTile(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    var percent by remember { mutableIntStateOf(-1) }
+    var charging by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            val status = context.registerReceiver(null, android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+            val level = status?.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1) ?: -1
+            val scale = status?.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, 100) ?: 100
+            percent = if (level >= 0 && scale > 0) (level * 100 / scale) else -1
+            val state = status?.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1) ?: -1
+            charging = state == android.os.BatteryManager.BATTERY_STATUS_CHARGING ||
+                state == android.os.BatteryManager.BATTERY_STATUS_FULL
+            delay(30_000)
+        }
+    }
+    Column(modifier.clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha = .10f)).padding(13.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Bateria", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+            Spacer(Modifier.weight(1f))
+            Text(if (charging) "Carregando" else "Dispositivo", color = Color.White.copy(alpha = .65f), fontSize = 10.sp)
+        }
+        Spacer(Modifier.height(9.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.weight(1f).height(7.dp).clip(CircleShape).background(Color.White.copy(alpha = .18f))) {
+                Box(Modifier.fillMaxWidth(if (percent >= 0) percent / 100f else 0f).fillMaxHeight().clip(CircleShape).background(Color(0xFF9DE6C1)))
+            }
+            Spacer(Modifier.width(8.dp))
+            Text(if (percent >= 0) "$percent%" else "--", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        }
     }
 }
 
