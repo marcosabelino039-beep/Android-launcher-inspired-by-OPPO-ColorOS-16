@@ -191,7 +191,7 @@ private fun ColorOSLauncher() {
 
     folderTitle?.let { title ->
         val folderApps = remember(apps, title) {
-            val terms = if (title == "Social") listOf("instagram", "facebook", "tiktok", "twitter", "x", "discord", "reddit", "telegram", "whatsapp", "pinterest", "snapchat")
+            val terms = if (title == "Social") listOf("instagram", "facebook", "tiktok", "twitter", "discord", "reddit", "telegram", "whatsapp", "pinterest", "snapchat")
                         else listOf("settings", "file", "manager", "clock", "calculator", "camera", "gallery", "music", "browser", "security", "weather", "notes")
             apps.filter { app -> terms.any { term -> app.label.contains(term, true) || app.packageName.contains(term, true) } }
                 .ifEmpty { apps.take(12) }
