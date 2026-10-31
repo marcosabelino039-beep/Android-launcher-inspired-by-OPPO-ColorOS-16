@@ -6,6 +6,8 @@ import android.graphics.Canvas
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -35,6 +37,8 @@ import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Widgets
 import androidx.compose.material3.*
 import androidx.compose.ui.window.Dialog
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -85,6 +89,14 @@ private fun ColorOSLauncher() {
     var clock by remember { mutableStateOf("") }
     var selectedApp by remember { mutableStateOf<LaunchApp?>(null) }
     var pinnedPackages by remember { mutableStateOf(context.getSharedPreferences("launcher_prefs", 0).getStringSet("pinned_apps", emptySet())?.toSet() ?: emptySet()) }
+    var wallpaperUri by remember { mutableStateOf(context.getSharedPreferences("launcher_prefs", 0).getString("wallpaper_uri", null)) }
+    val wallpaperPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+            wallpaperUri = uri.toString()
+            context.getSharedPreferences("launcher_prefs", 0).edit().putString("wallpaper_uri", wallpaperUri).apply()
+        }
+    }
 
     LaunchedEffect(Unit) {
         val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
@@ -121,13 +133,22 @@ private fun ColorOSLauncher() {
                 )
             }
     ) {
+        if (wallpaperUri != null && !settings) {
+            AsyncImage(
+                model = ImageRequest.Builder(context).data(android.net.Uri.parse(wallpaperUri)).crossfade(true).build(),
+                contentDescription = "Papel de parede",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop
+            )
+            Box(Modifier.fillMaxSize().background(Color(0x660B1426)))
+        }
         // Soft ambient highlights behind the glass surfaces.
         Box(Modifier.offset(x = (-80).dp, y = 190.dp).size(260.dp).blur(75.dp).background(Color(0x665E9EFF), CircleShape))
         Box(Modifier.align(Alignment.BottomEnd).offset(x = 70.dp, y = (-110).dp).size(250.dp).blur(80.dp).background(Color(0x5576D8C8), CircleShape))
 
         AnimatedContent(targetState = settings, label = "main-screen") { showSettings ->
             if (showSettings) {
-                SettingsPage(gridColumns = gridColumns, onGridColumnsChange = { columns -> gridColumns = columns; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("grid_columns", columns).apply() }, iconSize = homeIconSize, onIconSizeChange = { size -> homeIconSize = size; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("home_icon_size", size).apply() }, onBack = { settings = false })
+                SettingsPage(gridColumns = gridColumns, onGridColumnsChange = { columns -> gridColumns = columns; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("grid_columns", columns).apply() }, iconSize = homeIconSize, onIconSizeChange = { size -> homeIconSize = size; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("home_icon_size", size).apply() }, hasWallpaper = wallpaperUri != null, onChooseWallpaper = { wallpaperPicker.launch(arrayOf("image/*")) }, onRemoveWallpaper = { wallpaperUri = null; context.getSharedPreferences("launcher_prefs", 0).edit().remove("wallpaper_uri").apply() }, onBack = { settings = false })
             } else {
                 Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 22.dp)) {
                     Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -296,7 +317,7 @@ private fun launch(app: LaunchApp, context: android.content.Context) {
 }
 
 @Composable
-private fun SettingsPage(gridColumns: Int, onGridColumnsChange: (Int) -> Unit, iconSize: Int, onIconSizeChange: (Int) -> Unit, onBack: () -> Unit) {
+private fun SettingsPage(gridColumns: Int, onGridColumnsChange: (Int) -> Unit, iconSize: Int, onIconSizeChange: (Int) -> Unit, hasWallpaper: Boolean, onChooseWallpaper: () -> Unit, onRemoveWallpaper: () -> Unit, onBack: () -> Unit) {
     Column(Modifier.fillMaxSize().background(Color(0xFF17233D)).statusBarsPadding().navigationBarsPadding().padding(22.dp)) {
         Text("‹  Voltar", color = Color.White, fontSize = 16.sp, modifier = Modifier.clickable { onBack() })
         Spacer(Modifier.height(26.dp))
@@ -321,6 +342,16 @@ private fun SettingsPage(gridColumns: Int, onGridColumnsChange: (Int) -> Unit, i
             steps = 5
         )
         Spacer(Modifier.height(12.dp))
+        Text("Papel de parede", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            OutlinedButton(onClick = onChooseWallpaper, modifier = Modifier.weight(1f)) {
+                Text(if (hasWallpaper) "Trocar imagem" else "Escolher imagem")
+            }
+            if (hasWallpaper) {
+                TextButton(onClick = onRemoveWallpaper) { Text("Remover") }
+            }
+        }
+        Spacer(Modifier.height(12.dp))
         listOf("Formato dos ícones" to "Arredondado", "Tamanho dos ícones" to "Padrão", "Animações" to "Fluidas", "Efeito de profundidade" to "Ativado", "Desfoque e transparência" to "Vidro fosco", "Gestos" to "Deslizar para abrir a gaveta", "Widgets" to "Espaço inteligente").forEach { (title, value) ->
             Row(Modifier.fillMaxWidth().padding(vertical = 10.dp).clip(RoundedCornerShape(18.dp)).background(Color.White.copy(alpha = .09f)).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(title, color = Color.White, modifier = Modifier.weight(1f), fontSize = 14.sp)
@@ -328,7 +359,7 @@ private fun SettingsPage(gridColumns: Int, onGridColumnsChange: (Int) -> Unit, i
             }
         }
         Spacer(Modifier.height(12.dp))
-        Text("A quantidade de colunas é aplicada imediatamente e salva neste dispositivo. As demais opções ainda são prévias visuais.", color = Color.White.copy(alpha = .5f), fontSize = 11.sp)
+        Text("Grade, tamanho dos ícones e papel de parede são salvos neste dispositivo. Algumas opções restantes ainda são prévias visuais.", color = Color.White.copy(alpha = .5f), fontSize = 11.sp)
     }
 }
 
