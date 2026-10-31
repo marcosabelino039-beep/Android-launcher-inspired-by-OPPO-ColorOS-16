@@ -1,9 +1,8 @@
-
-name: Build ColorOS16 Launcher
+name: Build Independent ColorOS16 Launcher
 
 on:
   push:
-    branches: [main]
+    branches: [main, coloros16-independent-launcher]
   workflow_dispatch:
 
 permissions:
@@ -12,17 +11,14 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Extract project
+      - name: Assemble clean Android project
         run: |
-          mkdir -p /tmp/coloros-project
-          unzip -o ColorOS16-Launcher-project.zip -d /tmp/coloros-project
-          cp -r /tmp/coloros-project/. .
-          cp -r .launcher-overrides/. .
+          mkdir -p app
+          cp -r .launcher-overrides/app/. app/
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -41,6 +37,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: ColorOS16-Launcher-APK
+          name: ColorOS16-Independent-Launcher
           path: app/build/outputs/apk/debug/app-debug.apk
-          
