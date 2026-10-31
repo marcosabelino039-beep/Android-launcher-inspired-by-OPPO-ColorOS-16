@@ -237,13 +237,32 @@ private fun ColorOSLauncher() {
     }
 
     folderTitle?.let { title ->
-        val folderApps = remember(apps, title) {
+        val prefs = context.getSharedPreferences("launcher_prefs", 0)
+        val prefKey = "folder_apps_" + title
+        val defaultPackages = remember(apps, title) {
             val terms = if (title == "Social") listOf("instagram", "facebook", "tiktok", "twitter", "discord", "reddit", "telegram", "whatsapp", "pinterest", "snapchat")
                         else listOf("settings", "file", "manager", "clock", "calculator", "camera", "gallery", "music", "browser", "security", "weather", "notes")
             apps.filter { app -> terms.any { term -> app.label.contains(term, true) || app.packageName.contains(term, true) } }
-                .ifEmpty { apps.take(12) }
+                .ifEmpty { apps.take(12) }.map { it.packageName }.toSet()
         }
-        FolderDialog(title = title, apps = folderApps, onLaunch = { app -> launch(app, context) }, onDismiss = { folderTitle = null })
+        var selectedPackages by remember(title, apps) {
+            mutableStateOf(prefs.getStringSet(prefKey, null)?.toSet() ?: defaultPackages)
+        }
+        val folderApps = apps.filter { it.packageName in selectedPackages }
+        FolderDialog(
+            title = title,
+            apps = folderApps,
+            allApps = apps,
+            selectedPackages = selectedPackages,
+            onToggleApp = { app ->
+                val next = if (app.packageName in selectedPackages) selectedPackages - app.packageName
+                           else selectedPackages + app.packageName
+                selectedPackages = next
+                prefs.edit().putStringSet(prefKey, next).apply()
+            },
+            onLaunch = { app -> launch(app, context) },
+            onDismiss = { folderTitle = null }
+        )
     }
 }
 
@@ -402,9 +421,13 @@ private fun SettingsPage(gridColumns: Int, onGridColumnsChange: (Int) -> Unit, i
 private fun FolderDialog(
     title: String,
     apps: List<LaunchApp>,
+    allApps: List<LaunchApp>,
+    selectedPackages: Set<String>,
+    onToggleApp: (LaunchApp) -> Unit,
     onLaunch: (LaunchApp) -> Unit,
     onDismiss: () -> Unit
 ) {
+    var editing by remember { mutableStateOf(false) }
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             modifier = Modifier.fillMaxWidth(),
@@ -416,13 +439,51 @@ private fun FolderDialog(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(title, color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
-                        Text(apps.size.toString() + " aplicativos", color = Color.White.copy(alpha = .62f), fontSize = 12.sp)
+                        Text(
+                            if (editing) "Selecione os aplicativos da pasta" else "${apps.size} aplicativos",
+                            color = Color.White.copy(alpha = .62f),
+                            fontSize = 12.sp
+                        )
                     }
-                    TextButton(onClick = onDismiss) { Text("Fechar", color = Color.White) }
+                    TextButton(onClick = { editing = !editing }) {
+                        Text(if (editing) "Concluir" else "Editar", color = Color.White)
+                    }
                 }
                 Spacer(Modifier.height(14.dp))
-                if (apps.isEmpty()) {
-                    Text("Nenhum aplicativo encontrado nesta pasta.", color = Color.White.copy(alpha = .75f))
+                if (editing) {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        modifier = Modifier.heightIn(max = 430.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        items(allApps, key = { it.packageName }) { app ->
+                            Row(
+                                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                                    .clickable { onToggleApp(app) }.padding(horizontal = 4.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Checkbox(
+                                    checked = app.packageName in selectedPackages,
+                                    onCheckedChange = { onToggleApp(app) },
+                                    colors = CheckboxDefaults.colors(
+                                        checkedColor = Color(0xFF8EDBC4),
+                                        uncheckedColor = Color.White.copy(alpha = .65f),
+                                        checkmarkColor = Color(0xFF17233D)
+                                    )
+                                )
+                                Text(
+                                    app.label,
+                                    color = Color.White,
+                                    fontSize = 11.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                } else if (apps.isEmpty()) {
+                    Text("Esta pasta está vazia. Toque em Editar para adicionar aplicativos.", color = Color.White.copy(alpha = .75f))
                 } else {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(4),
