@@ -125,14 +125,31 @@ private fun ColorOSLauncher() {
         }
     }
 
+    val packageReceiver = remember(context) {
+        object : android.content.BroadcastReceiver() {
+            override fun onReceive(receiverContext: android.content.Context?, intent: Intent?) {
+                apps = loadLaunchApps(context)
+            }
+        }
+    }
+    DisposableEffect(packageReceiver) {
+        val filter = android.content.IntentFilter().apply {
+            addAction(Intent.ACTION_PACKAGE_ADDED)
+            addAction(Intent.ACTION_PACKAGE_REMOVED)
+            addAction(Intent.ACTION_PACKAGE_CHANGED)
+            addDataScheme("package")
+        }
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            context.registerReceiver(packageReceiver, filter, android.content.Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("DEPRECATION")
+            context.registerReceiver(packageReceiver, filter)
+        }
+        onDispose { runCatching { context.unregisterReceiver(packageReceiver) } }
+    }
+
     LaunchedEffect(Unit) {
-        val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-        apps = pm.queryIntentActivities(intent, 0)
-            .mapNotNull { info ->
-                val pkg = info.activityInfo.packageName
-                if (pkg == context.packageName) null
-                else LaunchApp(info.loadLabel(pm).toString(), pkg, info.loadIcon(pm))
-            }.distinctBy { it.packageName }.sortedBy { it.label.lowercase() }
+        apps = loadLaunchApps(context)
     }
     LaunchedEffect(Unit) {
         while (true) {
@@ -526,6 +543,19 @@ private fun AppArtwork(drawable: Drawable, modifier: Modifier = Modifier, iconSh
     }
     val shape = when (iconShape) { "circle" -> CircleShape; "rounded" -> RoundedCornerShape(18.dp); else -> RoundedCornerShape(28) }
     Image(bitmap, null, modifier.clip(shape))
+}
+
+private fun loadLaunchApps(context: android.content.Context): List<LaunchApp> {
+    val pm = context.packageManager
+    val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+    return pm.queryIntentActivities(intent, 0)
+        .mapNotNull { info ->
+            val packageName = info.activityInfo.packageName
+            if (packageName == context.packageName) null
+            else LaunchApp(info.loadLabel(pm).toString(), packageName, info.loadIcon(pm))
+        }
+        .distinctBy { it.packageName }
+        .sortedBy { it.label.lowercase() }
 }
 
 private fun launch(app: LaunchApp, context: android.content.Context) {
