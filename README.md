@@ -8,13 +8,13 @@ Independent Android launcher inspired by the visual language of OPPO ColorOS 16.
 - minSdk 26, targetSdk 33
 - Kotlin, Jetpack Compose, Gradle
 
-## Current implementation (prototype stage 0.2)
+## Current implementation (prototype stage 0.3)
 - HOME launcher activity, selectable as the default home app
 - Dynamic app discovery and original installed app icons
 - App drawer with live search
 - Animated icon press feedback and animated screen transitions
 - ColorOS-inspired dark glass visual language, gradient lighting and translucent cards
-- Clock/date panel and visual smart-widget placeholders
+- Clock/date panel, live battery percentage/charging tile, and weather placeholder
 - Interactive app folders with category-based app grouping and launch actions
 - Long-press app actions to add or remove apps from the home screen, saved between sessions
 - Persistent home-screen grid setting (3–6 columns)
