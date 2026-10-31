@@ -88,6 +88,8 @@ private fun ColorOSLauncher() {
     var drawer by remember { mutableStateOf(false) }
     var search by remember { mutableStateOf("") }
     var folderTitle by remember { mutableStateOf<String?>(null) }
+    var socialFolderName by remember { mutableStateOf(context.getSharedPreferences("launcher_prefs", 0).getString("folder_name_Social", "Social") ?: "Social") }
+    var toolsFolderName by remember { mutableStateOf(context.getSharedPreferences("launcher_prefs", 0).getString("folder_name_Ferramentas", "Ferramentas") ?: "Ferramentas") }
     var settings by remember { mutableStateOf(false) }
     var gridColumns by remember { mutableIntStateOf(context.getSharedPreferences("launcher_prefs", 0).getInt("grid_columns", 4)) }
     var homeIconSize by remember { mutableIntStateOf(context.getSharedPreferences("launcher_prefs", 0).getInt("home_icon_size", 54).coerceIn(42, 72)) }
@@ -201,8 +203,8 @@ private fun ColorOSLauncher() {
                     Spacer(Modifier.height(15.dp))
                     LazyVerticalGrid(columns = GridCells.Fixed(gridColumns), modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(17.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(favorites) { app -> AppIcon(app, iconSize = homeIconSize.dp, onClick = { launch(app, context) }, onLongClick = { selectedApp = app }) }
-                        item { FolderIcon(apps = apps.filter { it.packageName in (pinnedPackages + apps.map { app -> app.packageName }) && listOf("instagram", "facebook", "tiktok", "twitter", "discord", "reddit", "whatsapp", "pinterest", "snapchat").any { term -> it.label.contains(term, true) || it.packageName.contains(term, true) } }.take(4)) { folderTitle = "Social" } }
-                        item { FolderIcon(label = "Ferramentas", apps = apps.filter { app -> listOf("settings", "file", "manager", "clock", "calculator", "camera", "gallery", "music", "browser", "security", "notes").any { term -> app.label.contains(term, true) || app.packageName.contains(term, true) } }.take(4)) { folderTitle = "Ferramentas" } }
+                        item { FolderIcon(label = socialFolderName, apps = apps.filter { app -> listOf("instagram", "facebook", "tiktok", "twitter", "discord", "reddit", "whatsapp", "pinterest", "snapchat").any { term -> app.label.contains(term, true) || app.packageName.contains(term, true) } }.take(4)) { folderTitle = "Social" } }
+                        item { FolderIcon(label = toolsFolderName, apps = apps.filter { app -> listOf("settings", "file", "manager", "clock", "calculator", "camera", "gallery", "music", "browser", "security", "notes").any { term -> app.label.contains(term, true) || app.packageName.contains(term, true) } }.take(4)) { folderTitle = "Ferramentas" } }
                     }
 
                     Row(Modifier.fillMaxWidth().padding(bottom = 12.dp).clip(RoundedCornerShape(28.dp)).background(Color.White.copy(alpha = .15f)).padding(horizontal = 15.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
@@ -278,6 +280,10 @@ private fun ColorOSLauncher() {
                 prefs.edit().putStringSet(prefKey, next).apply()
             },
             onLaunch = { app -> launch(app, context) },
+            onRename = { newName ->
+                if (title == "Social") { socialFolderName = newName; prefs.edit().putString("folder_name_Social", newName).apply() }
+                else { toolsFolderName = newName; prefs.edit().putString("folder_name_Ferramentas", newName).apply() }
+            },
             onDismiss = { folderTitle = null }
         )
     }
@@ -451,9 +457,12 @@ private fun FolderDialog(
     selectedPackages: Set<String>,
     onToggleApp: (LaunchApp) -> Unit,
     onLaunch: (LaunchApp) -> Unit,
+    onRename: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
     var editing by remember { mutableStateOf(false) }
+    var renaming by remember { mutableStateOf(false) }
+    var folderName by remember(title) { mutableStateOf(title) }
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             modifier = Modifier.fillMaxWidth().animateContentSize(spring(dampingRatio = .82f, stiffness = 380f)),
@@ -464,16 +473,21 @@ private fun FolderDialog(
             Column(Modifier.padding(20.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(title, color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                        Text(folderName, color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
                         Text(
                             if (editing) "Selecione os aplicativos da pasta" else "${apps.size} aplicativos",
                             color = Color.White.copy(alpha = .62f),
                             fontSize = 12.sp
                         )
                     }
+                    TextButton(onClick = { renaming = !renaming }) { Text(if (renaming) "Voltar" else "Nome", color = Color.White) }
                     TextButton(onClick = { editing = !editing }) {
                         Text(if (editing) "Concluir" else "Editar", color = Color.White)
                     }
+                }
+                if (renaming) {
+                    OutlinedTextField(value = folderName, onValueChange = { folderName = it.take(24) }, singleLine = true, label = { Text("Nome da pasta") })
+                    TextButton(onClick = { val clean = folderName.trim(); if (clean.isNotEmpty()) onRename(clean); renaming = false }) { Text("Salvar nome", color = Color.White) }
                 }
                 Spacer(Modifier.height(14.dp))
                 if (editing) {
