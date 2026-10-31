@@ -88,7 +88,7 @@ private fun ColorOSLauncher() {
     var drawer by remember { mutableStateOf(false) }
     var search by remember { mutableStateOf("") }
     var folderTitle by remember { mutableStateOf<String?>(null) }
-    var customFolders by remember { mutableStateOf(context.getSharedPreferences("launcher_prefs", 0).getStringSet("custom_folders", emptySet())?.toList()?.sorted() ?: emptyList()) }
+    var customFolders by remember { mutableStateOf<List<String>>(context.getSharedPreferences("launcher_prefs", 0).getStringSet("custom_folders", emptySet<String>())?.toList()?.sorted() ?: emptyList()) }
     var showCreateFolder by remember { mutableStateOf(false) }
     var newFolderName by remember { mutableStateOf("") }
     var socialFolderName by remember { mutableStateOf(context.getSharedPreferences("launcher_prefs", 0).getString("folder_name_Social", "Social") ?: "Social") }
@@ -213,7 +213,7 @@ private fun ColorOSLauncher() {
                         item { FolderIcon(label = socialFolderName, apps = apps.filter { app -> listOf("instagram", "facebook", "tiktok", "twitter", "discord", "reddit", "whatsapp", "pinterest", "snapchat").any { term -> app.label.contains(term, true) || app.packageName.contains(term, true) } }.take(4)) { folderTitle = "Social" } }
                         item { FolderIcon(label = toolsFolderName, apps = apps.filter { app -> listOf("settings", "file", "manager", "clock", "calculator", "camera", "gallery", "music", "browser", "security", "notes").any { term -> app.label.contains(term, true) || app.packageName.contains(term, true) } }.take(4)) { folderTitle = "Ferramentas" } }
                         items(customFolders, key = { "custom_folder_" + it }) { name ->
-                            val saved = context.getSharedPreferences("launcher_prefs", 0).getStringSet("folder_apps_" + name, emptySet()) ?: emptySet()
+                            val saved: Set<String> = context.getSharedPreferences("launcher_prefs", 0).getStringSet("folder_apps_" + name, emptySet<String>()) ?: emptySet()
                             FolderIcon(label = name, apps = apps.filter { it.packageName in saved }.take(4)) { folderTitle = name }
                         }
                     }
@@ -256,7 +256,7 @@ private fun ColorOSLauncher() {
             confirmButton = {
                 TextButton(onClick = {
                     val name = newFolderName.trim()
-                    if (name.isNotEmpty() && name !in customFolders && name != "Social" && name != "Ferramentas") {
+                    if (name.isNotEmpty() && customFolders.none { it.equals(name, ignoreCase = true) } && !name.equals("Social", true) && !name.equals("Ferramentas", true)) {
                         customFolders = customFolders + name
                         context.getSharedPreferences("launcher_prefs", 0).edit().putStringSet("custom_folders", customFolders.toSet()).putStringSet("folder_apps_" + name, emptySet()).apply()
                     }
@@ -301,7 +301,7 @@ private fun ColorOSLauncher() {
         val folderApps = apps.filter { it.packageName in selectedPackages }
         FolderDialog(
             title = title,
-            displayName = if (title == "Social") socialFolderName else toolsFolderName,
+            displayName = when (title) { "Social" -> socialFolderName; "Ferramentas" -> toolsFolderName; else -> title },
             apps = folderApps,
             allApps = apps,
             selectedPackages = selectedPackages,
@@ -315,7 +315,7 @@ private fun ColorOSLauncher() {
             onRename = { newName ->
                 if (title == "Social") { socialFolderName = newName; prefs.edit().putString("folder_name_Social", newName).apply() }
                 else if (title == "Ferramentas") { toolsFolderName = newName; prefs.edit().putString("folder_name_Ferramentas", newName).apply() }
-                else if (title in customFolders && newName !in customFolders) {
+                else if (title in customFolders && newName.isNotBlank() && customFolders.none { it.equals(newName, ignoreCase = true) }) {
                     customFolders = customFolders.map { if (it == title) newName else it }
                     prefs.edit().putStringSet("custom_folders", customFolders.toSet())
                         .putStringSet("folder_apps_" + newName, selectedPackages)
