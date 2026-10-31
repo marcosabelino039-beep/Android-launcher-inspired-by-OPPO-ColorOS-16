@@ -270,6 +270,7 @@ private fun ColorOSLauncher() {
         val folderApps = apps.filter { it.packageName in selectedPackages }
         FolderDialog(
             title = title,
+            displayName = if (title == "Social") socialFolderName else toolsFolderName,
             apps = folderApps,
             allApps = apps,
             selectedPackages = selectedPackages,
@@ -452,6 +453,7 @@ private fun SettingsPage(gridColumns: Int, onGridColumnsChange: (Int) -> Unit, i
 @Composable
 private fun FolderDialog(
     title: String,
+    displayName: String,
     apps: List<LaunchApp>,
     allApps: List<LaunchApp>,
     selectedPackages: Set<String>,
@@ -462,7 +464,7 @@ private fun FolderDialog(
 ) {
     var editing by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf(false) }
-    var folderName by remember(title) { mutableStateOf(title) }
+    var folderName by remember(displayName) { mutableStateOf(displayName) }
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             modifier = Modifier.fillMaxWidth().animateContentSize(spring(dampingRatio = .82f, stiffness = 380f)),
