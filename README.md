@@ -3,7 +3,7 @@
 Launcher Android independente inspirado na linguagem visual do OPPO ColorOS 16. Não é um produto OPPO e não contém código ou recursos proprietários da OPPO.
 
 ## Versão atual
-- Versão: 0.4.0
+- Versão: 0.4.1
 - applicationId: `com.peladagpt.coloros16launcher`
 - Android mínimo: 8.0 (API 26)
 - Alvo de compilação: Android 13 (API 33)
@@ -29,6 +29,7 @@ Launcher Android independente inspirado na linguagem visual do OPPO ColorOS 16. 
 - Gestos de deslizar para abrir e fechar a gaveta.
 - Botão Voltar do Android fecha primeiro diálogos, pastas, gaveta e configurações.
 - Preferências de personalização salvas localmente.
+- Reorganização dos aplicativos fixados com controles para mover um item uma posição à esquerda ou à direita.
 
 ## Limitações conhecidas
 Este projeto é um launcher de terceiros, não uma ROM nem um port completo do ColorOS. Não substitui a central de controle, tela de bloqueio, barra de status ou configurações do MIUI. O cartão de clima ainda é ilustrativo; widgets Android reais via AppWidgetHost, drag-and-drop livre entre posições, múltiplas páginas da tela inicial, pacotes de ícones e blur de sistema ainda não estão implementados. Alguns gestos e animações do sistema são controlados pelo Android/MIUI e não podem ser reproduzidos integralmente por um launcher.
