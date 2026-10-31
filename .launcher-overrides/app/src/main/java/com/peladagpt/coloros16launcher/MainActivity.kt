@@ -96,6 +96,7 @@ private fun ColorOSLauncher() {
     var settings by remember { mutableStateOf(false) }
     var gridColumns by remember { mutableIntStateOf(context.getSharedPreferences("launcher_prefs", 0).getInt("grid_columns", 4)) }
     var homeIconSize by remember { mutableIntStateOf(context.getSharedPreferences("launcher_prefs", 0).getInt("home_icon_size", 54).coerceIn(42, 72)) }
+    var iconShape by remember { mutableStateOf(context.getSharedPreferences("launcher_prefs", 0).getString("icon_shape", "squircle") ?: "squircle") }
     var animationSpeed by remember { mutableIntStateOf(context.getSharedPreferences("launcher_prefs", 0).getInt("animation_speed", 100).coerceIn(60, 150)) }
     var clock by remember { mutableStateOf("") }
     var selectedApp by remember { mutableStateOf<LaunchApp?>(null) }
@@ -166,7 +167,7 @@ private fun ColorOSLauncher() {
             label = "main-screen"
         ) { showSettings ->
             if (showSettings) {
-                SettingsPage(gridColumns = gridColumns, onGridColumnsChange = { columns -> gridColumns = columns; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("grid_columns", columns).apply() }, iconSize = homeIconSize, onIconSizeChange = { size -> homeIconSize = size; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("home_icon_size", size).apply() }, animationSpeed = animationSpeed, onAnimationSpeedChange = { speed -> animationSpeed = speed; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("animation_speed", speed).apply() }, hasWallpaper = wallpaperUri != null, onChooseWallpaper = { wallpaperPicker.launch(arrayOf("image/*")) }, onRemoveWallpaper = { wallpaperUri = null; context.getSharedPreferences("launcher_prefs", 0).edit().remove("wallpaper_uri").apply() }, onBack = { settings = false })
+                SettingsPage(gridColumns = gridColumns, onGridColumnsChange = { columns -> gridColumns = columns; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("grid_columns", columns).apply() }, iconSize = homeIconSize, onIconSizeChange = { size -> homeIconSize = size; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("home_icon_size", size).apply() }, iconShape = iconShape, onIconShapeChange = { shape -> iconShape = shape; context.getSharedPreferences("launcher_prefs", 0).edit().putString("icon_shape", shape).apply() }, animationSpeed = animationSpeed, onAnimationSpeedChange = { speed -> animationSpeed = speed; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("animation_speed", speed).apply() }, hasWallpaper = wallpaperUri != null, onChooseWallpaper = { wallpaperPicker.launch(arrayOf("image/*")) }, onRemoveWallpaper = { wallpaperUri = null; context.getSharedPreferences("launcher_prefs", 0).edit().remove("wallpaper_uri").apply() }, onBack = { settings = false })
             } else {
                 Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 22.dp)) {
                     Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -209,7 +210,7 @@ private fun ColorOSLauncher() {
                     }
                     Spacer(Modifier.height(15.dp))
                     LazyVerticalGrid(columns = GridCells.Fixed(gridColumns), modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(17.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(favorites) { app -> AppIcon(app, iconSize = homeIconSize.dp, onClick = { launch(app, context) }, onLongClick = { selectedApp = app }) }
+                        items(favorites) { app -> AppIcon(app, iconSize = homeIconSize.dp, iconShape = iconShape, onClick = { launch(app, context) }, onLongClick = { selectedApp = app }) }
                         item { FolderIcon(label = socialFolderName, apps = apps.filter { app -> listOf("instagram", "facebook", "tiktok", "twitter", "discord", "reddit", "whatsapp", "pinterest", "snapchat").any { term -> app.label.contains(term, true) || app.packageName.contains(term, true) } }.take(4)) { folderTitle = "Social" } }
                         item { FolderIcon(label = toolsFolderName, apps = apps.filter { app -> listOf("settings", "file", "manager", "clock", "calculator", "camera", "gallery", "music", "browser", "security", "notes").any { term -> app.label.contains(term, true) || app.packageName.contains(term, true) } }.take(4)) { folderTitle = "Ferramentas" } }
                         items(customFolders, key = { "custom_folder_" + it }) { name ->
@@ -379,7 +380,7 @@ private fun WidgetTile(title: String, subtitle: String, modifier: Modifier = Mod
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun AppIcon(app: LaunchApp, iconSize: androidx.compose.ui.unit.Dp = 54.dp, onClick: () -> Unit, onLongClick: () -> Unit = {}) {
+private fun AppIcon(app: LaunchApp, iconSize: androidx.compose.ui.unit.Dp = 54.dp, iconShape: String = "squircle", onClick: () -> Unit, onLongClick: () -> Unit = {}) {
     val scope = rememberCoroutineScope()
     var pressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(if (pressed) .86f else 1f, spring(dampingRatio = .42f, stiffness = 420f), label = "icon-press")
@@ -391,7 +392,7 @@ private fun AppIcon(app: LaunchApp, iconSize: androidx.compose.ui.unit.Dp = 54.d
             onClick()
         }
     }, onLongClick = onLongClick)) {
-        AppArtwork(app.icon, Modifier.size(iconSize))
+        AppArtwork(app.icon, Modifier.size(iconSize), iconShape)
         Spacer(Modifier.height(6.dp))
         Text(app.label, color = Color.White, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
@@ -428,7 +429,7 @@ private fun FolderIcon(label: String = "Social", apps: List<LaunchApp> = emptyLi
 }
 
 @Composable
-private fun AppArtwork(drawable: Drawable, modifier: Modifier = Modifier) {
+private fun AppArtwork(drawable: Drawable, modifier: Modifier = Modifier, iconShape: String = "squircle") {
     val bitmap = remember(drawable) {
         val bmp = Bitmap.createBitmap( drawable.intrinsicWidth.coerceAtLeast(1), drawable.intrinsicHeight.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bmp)
@@ -436,7 +437,8 @@ private fun AppArtwork(drawable: Drawable, modifier: Modifier = Modifier) {
         drawable.draw(canvas)
         bmp.asImageBitmap()
     }
-    Image(bitmap, null, modifier.clip(RoundedCornerShape(15.dp)))
+    val shape = when (iconShape) { "circle" -> CircleShape; "rounded" -> RoundedCornerShape(18.dp); else -> RoundedCornerShape(28) }
+    Image(bitmap, null, modifier.clip(shape))
 }
 
 private fun launch(app: LaunchApp, context: android.content.Context) {
@@ -444,7 +446,7 @@ private fun launch(app: LaunchApp, context: android.content.Context) {
 }
 
 @Composable
-private fun SettingsPage(gridColumns: Int, onGridColumnsChange: (Int) -> Unit, iconSize: Int, onIconSizeChange: (Int) -> Unit, animationSpeed: Int, onAnimationSpeedChange: (Int) -> Unit, hasWallpaper: Boolean, onChooseWallpaper: () -> Unit, onRemoveWallpaper: () -> Unit, onBack: () -> Unit) {
+private fun SettingsPage(gridColumns: Int, onGridColumnsChange: (Int) -> Unit, iconSize: Int, onIconSizeChange: (Int) -> Unit, iconShape: String, onIconShapeChange: (String) -> Unit, animationSpeed: Int, onAnimationSpeedChange: (Int) -> Unit, hasWallpaper: Boolean, onChooseWallpaper: () -> Unit, onRemoveWallpaper: () -> Unit, onBack: () -> Unit) {
     Column(Modifier.fillMaxSize().background(Color(0xFF17233D)).statusBarsPadding().navigationBarsPadding().padding(22.dp)) {
         Text("‹  Voltar", color = Color.White, fontSize = 16.sp, modifier = Modifier.clickable { onBack() })
         Spacer(Modifier.height(26.dp))
@@ -468,6 +470,15 @@ private fun SettingsPage(gridColumns: Int, onGridColumnsChange: (Int) -> Unit, i
             valueRange = 42f..72f,
             steps = 5
         )
+        Spacer(Modifier.height(18.dp))
+        Text("Formato dos ícones", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("squircle" to "ColorOS", "rounded" to "Arredondado", "circle" to "Circular").forEach { (shape, label) ->
+                Surface(color = if (iconShape == shape) Color(0xFF8EDBC4).copy(alpha = .28f) else Color.White.copy(alpha = .09f), shape = RoundedCornerShape(14.dp), modifier = Modifier.weight(1f).clickable { onIconShapeChange(shape) }) {
+                    Text(label, color = Color.White, fontSize = 11.sp, modifier = Modifier.padding(vertical = 12.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                }
+            }
+        }
         Spacer(Modifier.height(18.dp))
         Text("Velocidade das animações", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         Text("${animationSpeed}%", color = Color.White.copy(alpha = .68f), fontSize = 12.sp)
