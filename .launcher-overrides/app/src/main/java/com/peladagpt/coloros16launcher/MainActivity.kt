@@ -33,6 +33,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -144,6 +146,10 @@ private fun ColorOSLauncher() {
             .sortedBy { app -> pinnedOrder.indexOf(app.packageName).let { if (it < 0) Int.MAX_VALUE else it } }
         if (chosen.isNotEmpty()) chosen else apps.take(4)
     }
+    val homePageSize = gridColumns * 3
+    val homePageCount = maxOf(1, (favorites.size + homePageSize - 1) / homePageSize)
+    val homePagerState = rememberPagerState(pageCount = { homePageCount })
+
     val filtered = remember(apps, search) {
         if (search.isBlank()) apps else apps.filter { it.label.contains(search, true) }
     }
@@ -233,13 +239,36 @@ private fun ColorOSLauncher() {
                         }
                     }
                     Spacer(Modifier.height(15.dp))
-                    LazyVerticalGrid(columns = GridCells.Fixed(gridColumns), modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(17.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(favorites) { app -> AppIcon(app, iconSize = homeIconSize.dp, iconShape = iconShape, showLabel = showHomeLabels, labelSize = homeLabelSize, onClick = { launch(app, context) }, onLongClick = { selectedApp = app }) }
-                        item { FolderIcon(label = socialFolderName, iconShape = iconShape, folderSize = folderIconSize.dp, backgroundOpacity = folderOpacity / 100f, apps = apps.filter { app -> listOf("instagram", "facebook", "tiktok", "twitter", "discord", "reddit", "whatsapp", "pinterest", "snapchat").any { term -> app.label.contains(term, true) || app.packageName.contains(term, true) } }.take(4)) { folderTitle = "Social" } }
-                        item { FolderIcon(label = toolsFolderName, iconShape = iconShape, folderSize = folderIconSize.dp, backgroundOpacity = folderOpacity / 100f, apps = apps.filter { app -> listOf("settings", "file", "manager", "clock", "calculator", "camera", "gallery", "music", "browser", "security", "notes").any { term -> app.label.contains(term, true) || app.packageName.contains(term, true) } }.take(4)) { folderTitle = "Ferramentas" } }
-                        items(customFolders, key = { "custom_folder_" + it }) { name ->
-                            val saved: Set<String> = context.getSharedPreferences("launcher_prefs", 0).getStringSet("folder_apps_" + name, emptySet<String>()) ?: emptySet()
-                            FolderIcon(label = name, iconShape = iconShape, folderSize = folderIconSize.dp, backgroundOpacity = folderOpacity / 100f, apps = apps.filter { it.packageName in saved }.take(4)) { folderTitle = name }
+                    HorizontalPager(state = homePagerState, modifier = Modifier.weight(1f), beyondViewportPageCount = 1) { page ->
+                        val pageApps = favorites.drop(page * homePageSize).take(homePageSize)
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(gridColumns),
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(17.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(pageApps, key = { it.packageName }) { app ->
+                                AppIcon(app, iconSize = homeIconSize.dp, iconShape = iconShape, showLabel = showHomeLabels, labelSize = homeLabelSize, onClick = { launch(app, context) }, onLongClick = { selectedApp = app })
+                            }
+                            if (page == 0) {
+                                item(key = "folder_social") {
+                                    FolderIcon(label = socialFolderName, iconShape = iconShape, folderSize = folderIconSize.dp, backgroundOpacity = folderOpacity / 100f, apps = apps.filter { app -> listOf("instagram", "facebook", "tiktok", "twitter", "discord", "reddit", "whatsapp", "pinterest", "snapchat").any { term -> app.label.contains(term, true) || app.packageName.contains(term, true) } }.take(4)) { folderTitle = "Social" }
+                                }
+                                item(key = "folder_tools") {
+                                    FolderIcon(label = toolsFolderName, iconShape = iconShape, folderSize = folderIconSize.dp, backgroundOpacity = folderOpacity / 100f, apps = apps.filter { app -> listOf("settings", "file", "manager", "clock", "calculator", "camera", "gallery", "music", "browser", "security", "notes").any { term -> app.label.contains(term, true) || app.packageName.contains(term, true) } }.take(4)) { folderTitle = "Ferramentas" }
+                                }
+                                items(customFolders, key = { "custom_folder_" + it }) { name ->
+                                    val saved: Set<String> = context.getSharedPreferences("launcher_prefs", 0).getStringSet("folder_apps_" + name, emptySet<String>()) ?: emptySet()
+                                    FolderIcon(label = name, iconShape = iconShape, folderSize = folderIconSize.dp, backgroundOpacity = folderOpacity / 100f, apps = apps.filter { it.packageName in saved }.take(4)) { folderTitle = name }
+                                }
+                            }
+                        }
+                    }
+                    if (homePageCount > 1) {
+                        Row(Modifier.fillMaxWidth().padding(top = 5.dp, bottom = 7.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                            repeat(homePageCount) { index ->
+                                Box(Modifier.padding(horizontal = 4.dp).size(if (homePagerState.currentPage == index) 7.dp else 5.dp).clip(CircleShape).background(Color.White.copy(alpha = if (homePagerState.currentPage == index) .95f else .38f)))
+                            }
                         }
                     }
 
