@@ -19,6 +19,10 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -147,7 +151,14 @@ private fun ColorOSLauncher() {
         Box(Modifier.offset(x = (-80).dp, y = 190.dp).size(260.dp).blur(75.dp).background(Color(0x665E9EFF), CircleShape))
         Box(Modifier.align(Alignment.BottomEnd).offset(x = 70.dp, y = (-110).dp).size(250.dp).blur(80.dp).background(Color(0x5576D8C8), CircleShape))
 
-        AnimatedContent(targetState = settings, label = "main-screen") { showSettings ->
+        AnimatedContent(
+            targetState = settings,
+            transitionSpec = {
+                (fadeIn(tween(220)) + slideInVertically(tween(320)) { if (targetState) it / 8 else -it / 10 }) togetherWith
+                    (fadeOut(tween(160)) + slideOutVertically(tween(260)) { if (targetState) -it / 10 else it / 8 })
+            },
+            label = "main-screen"
+        ) { showSettings ->
             if (showSettings) {
                 SettingsPage(gridColumns = gridColumns, onGridColumnsChange = { columns -> gridColumns = columns; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("grid_columns", columns).apply() }, iconSize = homeIconSize, onIconSizeChange = { size -> homeIconSize = size; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("home_icon_size", size).apply() }, hasWallpaper = wallpaperUri != null, onChooseWallpaper = { wallpaperPicker.launch(arrayOf("image/*")) }, onRemoveWallpaper = { wallpaperUri = null; context.getSharedPreferences("launcher_prefs", 0).edit().remove("wallpaper_uri").apply() }, onBack = { settings = false })
             } else {
@@ -203,7 +214,12 @@ private fun ColorOSLauncher() {
             }
         }
 
-        AnimatedVisibility(visible = drawer, enter = fadeIn() + scaleIn(initialScale = .96f), exit = fadeOut() + scaleOut(targetScale = .98f), modifier = Modifier.fillMaxSize()) {
+        AnimatedVisibility(
+            visible = drawer,
+            enter = fadeIn(tween(180)) + slideInVertically(tween(340)) { it / 3 } + scaleIn(initialScale = .97f, animationSpec = spring(dampingRatio = .82f, stiffness = 360f)),
+            exit = fadeOut(tween(150)) + slideOutVertically(tween(260)) { it / 4 } + scaleOut(targetScale = .985f),
+            modifier = Modifier.fillMaxSize()
+        ) {
             Column(Modifier.fillMaxSize().background(Color(0xF2182235)).statusBarsPadding().navigationBarsPadding().padding(horizontal = 20.dp)) {
                 Row(Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 18.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("Todos os aplicativos", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
@@ -430,7 +446,7 @@ private fun FolderDialog(
     var editing by remember { mutableStateOf(false) }
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().animateContentSize(spring(dampingRatio = .82f, stiffness = 380f)),
             shape = RoundedCornerShape(30.dp),
             color = Color(0xF226344B),
             tonalElevation = 12.dp
