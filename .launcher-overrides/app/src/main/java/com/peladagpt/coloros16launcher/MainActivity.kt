@@ -91,6 +91,7 @@ private fun ColorOSLauncher() {
     var settings by remember { mutableStateOf(false) }
     var gridColumns by remember { mutableIntStateOf(context.getSharedPreferences("launcher_prefs", 0).getInt("grid_columns", 4)) }
     var homeIconSize by remember { mutableIntStateOf(context.getSharedPreferences("launcher_prefs", 0).getInt("home_icon_size", 54).coerceIn(42, 72)) }
+    var animationSpeed by remember { mutableIntStateOf(context.getSharedPreferences("launcher_prefs", 0).getInt("animation_speed", 100).coerceIn(60, 150)) }
     var clock by remember { mutableStateOf("") }
     var selectedApp by remember { mutableStateOf<LaunchApp?>(null) }
     var pinnedPackages by remember { mutableStateOf(context.getSharedPreferences("launcher_prefs", 0).getStringSet("pinned_apps", emptySet())?.toSet() ?: emptySet()) }
@@ -154,13 +155,13 @@ private fun ColorOSLauncher() {
         AnimatedContent(
             targetState = settings,
             transitionSpec = {
-                (fadeIn(tween(220)) + slideInVertically(tween(320)) { if (targetState) it / 8 else -it / 10 }) togetherWith
-                    (fadeOut(tween(160)) + slideOutVertically(tween(260)) { if (targetState) -it / 10 else it / 8 })
+                (fadeIn(tween(220 * animationSpeed / 100)) + slideInVertically(tween(320 * animationSpeed / 100)) { if (targetState) it / 8 else -it / 10 }) togetherWith
+                    (fadeOut(tween(160 * animationSpeed / 100)) + slideOutVertically(tween(260 * animationSpeed / 100)) { if (targetState) -it / 10 else it / 8 })
             },
             label = "main-screen"
         ) { showSettings ->
             if (showSettings) {
-                SettingsPage(gridColumns = gridColumns, onGridColumnsChange = { columns -> gridColumns = columns; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("grid_columns", columns).apply() }, iconSize = homeIconSize, onIconSizeChange = { size -> homeIconSize = size; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("home_icon_size", size).apply() }, hasWallpaper = wallpaperUri != null, onChooseWallpaper = { wallpaperPicker.launch(arrayOf("image/*")) }, onRemoveWallpaper = { wallpaperUri = null; context.getSharedPreferences("launcher_prefs", 0).edit().remove("wallpaper_uri").apply() }, onBack = { settings = false })
+                SettingsPage(gridColumns = gridColumns, onGridColumnsChange = { columns -> gridColumns = columns; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("grid_columns", columns).apply() }, iconSize = homeIconSize, onIconSizeChange = { size -> homeIconSize = size; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("home_icon_size", size).apply() }, animationSpeed = animationSpeed, onAnimationSpeedChange = { speed -> animationSpeed = speed; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("animation_speed", speed).apply() }, hasWallpaper = wallpaperUri != null, onChooseWallpaper = { wallpaperPicker.launch(arrayOf("image/*")) }, onRemoveWallpaper = { wallpaperUri = null; context.getSharedPreferences("launcher_prefs", 0).edit().remove("wallpaper_uri").apply() }, onBack = { settings = false })
             } else {
                 Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 22.dp)) {
                     Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -216,8 +217,8 @@ private fun ColorOSLauncher() {
 
         AnimatedVisibility(
             visible = drawer,
-            enter = fadeIn(tween(180)) + slideInVertically(tween(340)) { it / 3 } + scaleIn(initialScale = .97f, animationSpec = spring(dampingRatio = .82f, stiffness = 360f)),
-            exit = fadeOut(tween(150)) + slideOutVertically(tween(260)) { it / 4 } + scaleOut(targetScale = .985f),
+            enter = fadeIn(tween(180 * animationSpeed / 100)) + slideInVertically(tween(340 * animationSpeed / 100)) { it / 3 } + scaleIn(initialScale = .97f, animationSpec = spring(dampingRatio = .82f, stiffness = 360f)),
+            exit = fadeOut(tween(150 * animationSpeed / 100)) + slideOutVertically(tween(260 * animationSpeed / 100)) { it / 4 } + scaleOut(targetScale = .985f),
             modifier = Modifier.fillMaxSize()
         ) {
             Column(Modifier.fillMaxSize().background(Color(0xF2182235)).statusBarsPadding().navigationBarsPadding().padding(horizontal = 20.dp)) {
@@ -387,7 +388,7 @@ private fun launch(app: LaunchApp, context: android.content.Context) {
 }
 
 @Composable
-private fun SettingsPage(gridColumns: Int, onGridColumnsChange: (Int) -> Unit, iconSize: Int, onIconSizeChange: (Int) -> Unit, hasWallpaper: Boolean, onChooseWallpaper: () -> Unit, onRemoveWallpaper: () -> Unit, onBack: () -> Unit) {
+private fun SettingsPage(gridColumns: Int, onGridColumnsChange: (Int) -> Unit, iconSize: Int, onIconSizeChange: (Int) -> Unit, animationSpeed: Int, onAnimationSpeedChange: (Int) -> Unit, hasWallpaper: Boolean, onChooseWallpaper: () -> Unit, onRemoveWallpaper: () -> Unit, onBack: () -> Unit) {
     Column(Modifier.fillMaxSize().background(Color(0xFF17233D)).statusBarsPadding().navigationBarsPadding().padding(22.dp)) {
         Text("‹  Voltar", color = Color.White, fontSize = 16.sp, modifier = Modifier.clickable { onBack() })
         Spacer(Modifier.height(26.dp))
@@ -411,6 +412,10 @@ private fun SettingsPage(gridColumns: Int, onGridColumnsChange: (Int) -> Unit, i
             valueRange = 42f..72f,
             steps = 5
         )
+        Spacer(Modifier.height(18.dp))
+        Text("Velocidade das animações", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Text("${animationSpeed}%", color = Color.White.copy(alpha = .68f), fontSize = 12.sp)
+        Slider(value = animationSpeed.toFloat(), onValueChange = { onAnimationSpeedChange(it.roundToInt().coerceIn(60, 150)) }, valueRange = 60f..150f, steps = 8)
         Spacer(Modifier.height(12.dp))
         Text("Papel de parede", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -429,7 +434,7 @@ private fun SettingsPage(gridColumns: Int, onGridColumnsChange: (Int) -> Unit, i
             }
         }
         Spacer(Modifier.height(12.dp))
-        Text("Grade, tamanho dos ícones e papel de parede são salvos neste dispositivo. Algumas opções restantes ainda são prévias visuais.", color = Color.White.copy(alpha = .5f), fontSize = 11.sp)
+        Text("Grade, tamanho dos ícones, velocidade das animações e papel de parede são salvos neste dispositivo. Algumas opções restantes ainda são prévias visuais.", color = Color.White.copy(alpha = .5f), fontSize = 11.sp)
     }
 }
 
