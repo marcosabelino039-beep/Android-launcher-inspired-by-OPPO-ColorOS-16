@@ -81,6 +81,7 @@ private fun ColorOSLauncher() {
     var folderTitle by remember { mutableStateOf<String?>(null) }
     var settings by remember { mutableStateOf(false) }
     var gridColumns by remember { mutableIntStateOf(context.getSharedPreferences("launcher_prefs", 0).getInt("grid_columns", 4)) }
+    var homeIconSize by remember { mutableIntStateOf(context.getSharedPreferences("launcher_prefs", 0).getInt("home_icon_size", 54).coerceIn(42, 72)) }
     var clock by remember { mutableStateOf("") }
     var selectedApp by remember { mutableStateOf<LaunchApp?>(null) }
     var pinnedPackages by remember { mutableStateOf(context.getSharedPreferences("launcher_prefs", 0).getStringSet("pinned_apps", emptySet())?.toSet() ?: emptySet()) }
@@ -126,7 +127,7 @@ private fun ColorOSLauncher() {
 
         AnimatedContent(targetState = settings, label = "main-screen") { showSettings ->
             if (showSettings) {
-                SettingsPage(gridColumns = gridColumns, onGridColumnsChange = { columns -> gridColumns = columns; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("grid_columns", columns).apply() }, onBack = { settings = false })
+                SettingsPage(gridColumns = gridColumns, onGridColumnsChange = { columns -> gridColumns = columns; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("grid_columns", columns).apply() }, iconSize = homeIconSize, onIconSizeChange = { size -> homeIconSize = size; context.getSharedPreferences("launcher_prefs", 0).edit().putInt("home_icon_size", size).apply() }, onBack = { settings = false })
             } else {
                 Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 22.dp)) {
                     Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -165,7 +166,7 @@ private fun ColorOSLauncher() {
                     }
                     Spacer(Modifier.height(15.dp))
                     LazyVerticalGrid(columns = GridCells.Fixed(gridColumns), modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(17.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(favorites) { app -> AppIcon(app, onClick = { launch(app, context) }, onLongClick = { selectedApp = app }) }
+                        items(favorites) { app -> AppIcon(app, iconSize = homeIconSize.dp, onClick = { launch(app, context) }, onLongClick = { selectedApp = app }) }
                         item { FolderIcon { folderTitle = "Social" } }
                         item { FolderIcon(label = "Ferramentas") { folderTitle = "Ferramentas" } }
                     }
@@ -235,7 +236,7 @@ private fun WidgetTile(title: String, subtitle: String, modifier: Modifier = Mod
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun AppIcon(app: LaunchApp, onClick: () -> Unit, onLongClick: () -> Unit = {}) {
+private fun AppIcon(app: LaunchApp, iconSize: androidx.compose.ui.unit.Dp = 54.dp, onClick: () -> Unit, onLongClick: () -> Unit = {}) {
     val scope = rememberCoroutineScope()
     var pressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(if (pressed) .86f else 1f, spring(dampingRatio = .42f, stiffness = 420f), label = "icon-press")
@@ -247,7 +248,7 @@ private fun AppIcon(app: LaunchApp, onClick: () -> Unit, onLongClick: () -> Unit
             onClick()
         }
     }, onLongClick = onLongClick)) {
-        AppArtwork(app.icon, Modifier.size(54.dp))
+        AppArtwork(app.icon, Modifier.size(iconSize))
         Spacer(Modifier.height(6.dp))
         Text(app.label, color = Color.White, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
@@ -295,7 +296,7 @@ private fun launch(app: LaunchApp, context: android.content.Context) {
 }
 
 @Composable
-private fun SettingsPage(gridColumns: Int, onGridColumnsChange: (Int) -> Unit, onBack: () -> Unit) {
+private fun SettingsPage(gridColumns: Int, onGridColumnsChange: (Int) -> Unit, iconSize: Int, onIconSizeChange: (Int) -> Unit, onBack: () -> Unit) {
     Column(Modifier.fillMaxSize().background(Color(0xFF17233D)).statusBarsPadding().navigationBarsPadding().padding(22.dp)) {
         Text("‹  Voltar", color = Color.White, fontSize = 16.sp, modifier = Modifier.clickable { onBack() })
         Spacer(Modifier.height(26.dp))
@@ -309,6 +310,15 @@ private fun SettingsPage(gridColumns: Int, onGridColumnsChange: (Int) -> Unit, o
             onValueChange = { onGridColumnsChange(it.roundToInt().coerceIn(3, 6)) },
             valueRange = 3f..6f,
             steps = 2
+        )
+        Spacer(Modifier.height(18.dp))
+        Text("Tamanho dos ícones", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Text("$iconSize dp", color = Color.White.copy(alpha = .68f), fontSize = 12.sp)
+        Slider(
+            value = iconSize.toFloat(),
+            onValueChange = { onIconSizeChange(it.roundToInt().coerceIn(42, 72)) },
+            valueRange = 42f..72f,
+            steps = 5
         )
         Spacer(Modifier.height(12.dp))
         listOf("Formato dos ícones" to "Arredondado", "Tamanho dos ícones" to "Padrão", "Animações" to "Fluidas", "Efeito de profundidade" to "Ativado", "Desfoque e transparência" to "Vidro fosco", "Gestos" to "Deslizar para abrir a gaveta", "Widgets" to "Espaço inteligente").forEach { (title, value) ->
