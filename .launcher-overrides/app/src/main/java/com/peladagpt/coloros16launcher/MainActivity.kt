@@ -102,7 +102,7 @@ private fun ColorOSLauncher() {
     var clock by remember { mutableStateOf("") }
     var selectedApp by remember { mutableStateOf<LaunchApp?>(null) }
     var pinnedPackages by remember { mutableStateOf(context.getSharedPreferences("launcher_prefs", 0).getStringSet("pinned_apps", emptySet())?.toSet() ?: emptySet()) }
-    var pinnedOrder by remember { mutableStateOf(context.getSharedPreferences("launcher_prefs", 0).getString("pinned_order", "")?.split("|")?.filter { it.isNotBlank() } ?: emptyList()) }
+    var pinnedOrder by remember { mutableStateOf((context.getSharedPreferences("launcher_prefs", 0).getString("pinned_order", "")?.ifBlank { pinnedPackages.sorted().joinToString("|") } ?: pinnedPackages.sorted().joinToString("|")).split("|").filter { it.isNotBlank() }) }
     var wallpaperUri by remember { mutableStateOf(context.getSharedPreferences("launcher_prefs", 0).getString("wallpaper_uri", null)) }
     val wallpaperPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
