@@ -1,5 +1,8 @@
 package com.peladagpt.coloros16launcher
 
+import android.appwidget.AppWidgetHost
+import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProviderInfo
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -9,6 +12,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -47,6 +51,7 @@ import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Widgets
 import androidx.compose.material3.*
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.viewinterop.AndroidView
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import androidx.compose.runtime.*
@@ -72,8 +77,12 @@ import kotlin.math.roundToInt
 private data class LaunchApp(val label: String, val packageName: String, val icon: Drawable)
 
 class MainActivity : ComponentActivity() {
+    lateinit var widgetHost: AppWidgetHost
+        private set
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        widgetHost = AppWidgetHost(this, 16016)
         window.statusBarColor = android.graphics.Color.TRANSPARENT
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
         window.decorView.systemUiVisibility =
@@ -81,6 +90,16 @@ class MainActivity : ComponentActivity() {
             android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
             android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
         setContent { ColorOSLauncher() }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        runCatching { widgetHost.startListening() }
+    }
+
+    override fun onStop() {
+        runCatching { widgetHost.stopListening() }
+        super.onStop()
     }
 }
 
@@ -118,6 +137,38 @@ private fun ColorOSLauncher() {
     var pinnedOrder by remember { mutableStateOf((context.getSharedPreferences("launcher_prefs", 0).getString("pinned_order", "")?.ifBlank { pinnedPackages.sorted().joinToString("|") } ?: pinnedPackages.sorted().joinToString("|")).split("|").filter { it.isNotBlank() }) }
     var wallpaperUri by remember { mutableStateOf(context.getSharedPreferences("launcher_prefs", 0).getString("wallpaper_uri", null)) }
     var wallpaperDim by remember { mutableIntStateOf(context.getSharedPreferences("launcher_prefs", 0).getInt("wallpaper_dim", 35).coerceIn(0, 70)) }
+    var appWidgetId by remember { mutableIntStateOf(context.getSharedPreferences("launcher_prefs", 0).getInt("app_widget_id", -1)) }
+    var pendingWidgetId by remember { mutableIntStateOf(-1) }
+    val widgetConfigureLauncher = rememberLauncherForActivityResult(StartActivityForResult()) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK && pendingWidgetId >= 0) {
+            appWidgetId = pendingWidgetId
+            context.getSharedPreferences("launcher_prefs", 0).edit().putInt("app_widget_id", appWidgetId).apply()
+        } else if (pendingWidgetId >= 0) {
+            (context as? MainActivity)?.widgetHost?.deleteAppWidgetId(pendingWidgetId)
+        }
+        pendingWidgetId = -1
+    }
+    val widgetPicker = rememberLauncherForActivityResult(StartActivityForResult()) { result ->
+        val pickedId = result.data?.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, pendingWidgetId) ?: pendingWidgetId
+        if (result.resultCode == android.app.Activity.RESULT_OK && pickedId >= 0) {
+            pendingWidgetId = pickedId
+            val info = AppWidgetManager.getInstance(context).getAppWidgetInfo(pickedId)
+            if (info?.configure != null) {
+                val configureIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE).apply {
+                    component = info.configure
+                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, pickedId)
+                }
+                widgetConfigureLauncher.launch(configureIntent)
+            } else {
+                appWidgetId = pickedId
+                context.getSharedPreferences("launcher_prefs", 0).edit().putInt("app_widget_id", appWidgetId).apply()
+                pendingWidgetId = -1
+            }
+        } else if (pendingWidgetId >= 0) {
+            (context as? MainActivity)?.widgetHost?.deleteAppWidgetId(pendingWidgetId)
+            pendingWidgetId = -1
+        }
+    }
     val wallpaperPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
@@ -238,11 +289,41 @@ private fun ColorOSLauncher() {
                             Spacer(Modifier.width(8.dp))
                             Text("Espaço inteligente", color = Color.White.copy(alpha = .9f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                             Spacer(Modifier.weight(1f))
-                            Text("Widgets", color = Color.White.copy(alpha = .72f), fontSize = 12.sp)
+                            if (appWidgetId > 0) {
+                                Text("Remover", color = Color.White.copy(alpha = .65f), fontSize = 11.sp, modifier = Modifier.clickable {
+                                    (context as? MainActivity)?.widgetHost?.deleteAppWidgetId(appWidgetId)
+                                    appWidgetId = -1
+                                    context.getSharedPreferences("launcher_prefs", 0).edit().remove("app_widget_id").apply()
+                                })
+                                Spacer(Modifier.width(10.dp))
+                            }
+                            Text(if (appWidgetId > 0) "＋ Trocar" else "＋ Widget", color = Color.White.copy(alpha = .82f), fontSize = 12.sp, modifier = Modifier.clickable {
+                                val host = (context as? MainActivity)?.widgetHost
+                                if (host != null) {
+                                    pendingWidgetId = host.allocateAppWidgetId()
+                                    val pickIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_PICK).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, pendingWidgetId)
+                                    widgetPicker.launch(pickIntent)
+                                }
+                            })
                         }
                         Spacer(Modifier.height(10.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            WidgetTile("Clima", "Adicione uma cidade", Modifier.weight(1f))
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                            val widgetInfo = remember(appWidgetId) {
+                                if (appWidgetId > 0) AppWidgetManager.getInstance(context).getAppWidgetInfo(appWidgetId) else null
+                            }
+                            val host = context as? MainActivity
+                            if (widgetInfo != null && host != null) {
+                                AndroidView(
+                                    factory = { viewContext ->
+                                        host.widgetHost.createView(viewContext, appWidgetId, widgetInfo).apply {
+                                            setAppWidget(appWidgetId, widgetInfo)
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f).heightIn(min = 110.dp, max = 190.dp)
+                                )
+                            } else {
+                                WidgetTile("Widgets", "Toque em + Widget para adicionar", Modifier.weight(1f))
+                            }
                             BatteryTile(accentTheme, Modifier.weight(1f))
                         }
                     }
