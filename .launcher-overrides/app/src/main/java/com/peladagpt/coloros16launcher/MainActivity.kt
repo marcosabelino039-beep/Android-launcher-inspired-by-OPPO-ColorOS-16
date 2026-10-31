@@ -309,17 +309,28 @@ private fun ColorOSLauncher() {
             },
             dismissButton = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (isPinned && pinnedOrder.indexOf(app.packageName) > 0) {
+                    val currentIndex = pinnedOrder.indexOf(app.packageName)
+                    if (isPinned && currentIndex > 0) {
                         TextButton(onClick = {
                             val order = pinnedOrder.toMutableList()
-                            val index = order.indexOf(app.packageName)
-                            val previous = order[index - 1]
-                            order[index - 1] = order[index]
-                            order[index] = previous
+                            val previous = order[currentIndex - 1]
+                            order[currentIndex - 1] = order[currentIndex]
+                            order[currentIndex] = previous
                             pinnedOrder = order
                             context.getSharedPreferences("launcher_prefs", 0).edit().putString("pinned_order", order.joinToString("|")).apply()
                             selectedApp = null
-                        }) { Text("Mover para esquerda") }
+                        }) { Text("←") }
+                    }
+                    if (isPinned && currentIndex >= 0 && currentIndex < pinnedOrder.lastIndex) {
+                        TextButton(onClick = {
+                            val order = pinnedOrder.toMutableList()
+                            val next = order[currentIndex + 1]
+                            order[currentIndex + 1] = order[currentIndex]
+                            order[currentIndex] = next
+                            pinnedOrder = order
+                            context.getSharedPreferences("launcher_prefs", 0).edit().putString("pinned_order", order.joinToString("|")).apply()
+                            selectedApp = null
+                        }) { Text("→") }
                     }
                     TextButton(onClick = { selectedApp = null }) { Text("Fechar") }
                 }
