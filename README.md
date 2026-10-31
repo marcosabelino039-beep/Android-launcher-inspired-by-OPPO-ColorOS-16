@@ -1,31 +1,41 @@
-# ColorOS 16 Launcher — community-inspired prototype
+# ColorOS 16 Launcher — protótipo independente
 
-Independent Android launcher inspired by the visual language of OPPO ColorOS 16. This is not an OPPO product and contains no OPPO proprietary code or assets.
+Launcher Android independente inspirado na linguagem visual do OPPO ColorOS 16. Não é um produto OPPO e não contém código ou recursos proprietários da OPPO.
 
-## Target device
-- Redmi Note 10 5G
-- MIUI 14 / Android 13
-- minSdk 26, targetSdk 33
-- Kotlin, Jetpack Compose, Gradle
+## Versão atual
+- Versão: 0.4.0
+- applicationId: `com.peladagpt.coloros16launcher`
+- Android mínimo: 8.0 (API 26)
+- Alvo de compilação: Android 13 (API 33)
+- Kotlin, Jetpack Compose e Gradle
+- APK de depuração gerado pelo GitHub Actions
 
-## Current implementation (prototype stage 0.3)
-- HOME launcher activity, selectable as the default home app
-- Dynamic app discovery and original installed app icons
-- App drawer with live search
-- Animated icon press feedback and animated screen transitions
-- ColorOS-inspired dark glass visual language, gradient lighting and translucent cards
-- Clock/date panel, live battery percentage/charging tile, and weather placeholder
-- Interactive app folders with category-based app grouping and launch actions
-- Long-press app actions to add or remove apps from the home screen, saved between sessions
-- Persistent home-screen grid setting (3–6 columns)
-- Adjustable and persistent home icon size (42–72 dp)
-- System document-picker wallpaper selection with persistent URI permission and image rendering
-- Spring-based icon press feedback and animated transitions
-- Personalization/settings preview for grid, icon shape, size, animation, depth, blur and gestures
-- Swipe up/down gesture to open/close the app drawer
+## Recursos implementados
+- Pode ser selecionado como aplicativo de tela inicial padrão do Android.
+- Descoberta dos aplicativos instalados e exibição dos ícones originais.
+- Gaveta de aplicativos com pesquisa em tempo real e grade configurável.
+- Tela inicial com grade configurável e aplicativos fixados persistentes.
+- Pastas padrão e pastas personalizadas: criar, editar, renomear e excluir.
+- Ícones com formatos squircle, arredondado e circular.
+- Ajustes de tamanho dos ícones da tela inicial, pastas e dock.
+- Ajustes de tamanho dos nomes dos aplicativos.
+- Mostrar ou ocultar nomes dos aplicativos.
+- Dock configurável: quantidade de ícones, tamanho e transparência.
+- Transparência e tamanho dos ícones das pastas.
+- Papel de parede escolhido pelo seletor de documentos do Android.
+- Relógio, data e indicador de bateria atualizado periodicamente.
+- Animações de toque, transições entre telas, gaveta e abertura de pastas.
+- Velocidade das animações configurável.
+- Gestos de deslizar para abrir e fechar a gaveta.
+- Botão Voltar do Android fecha primeiro diálogos, pastas, gaveta e configurações.
+- Preferências de personalização salvas localmente.
 
-## Important limitations
-This is an independent launcher, not a full ColorOS system port. At this stage, folder editing/drag-and-drop, editable custom folders, full icon-pack support, real AppWidgetHost integration, full system blur, lock-screen/control-center replacement, and advanced 3D physics are not implemented yet. Android and MIUI control some system animations and surfaces, so a third-party launcher cannot reproduce every proprietary ColorOS behavior exactly.
+## Limitações conhecidas
+Este projeto é um launcher de terceiros, não uma ROM nem um port completo do ColorOS. Não substitui a central de controle, tela de bloqueio, barra de status ou configurações do MIUI. O cartão de clima ainda é ilustrativo; widgets Android reais via AppWidgetHost, drag-and-drop livre entre posições, múltiplas páginas da tela inicial, pacotes de ícones e blur de sistema ainda não estão implementados. Alguns gestos e animações do sistema são controlados pelo Android/MIUI e não podem ser reproduzidos integralmente por um launcher.
 
-## Build
-The GitHub Actions workflow builds a debug APK on pushes to `main` and uploads it as the `ColorOS16-Launcher-APK` artifact. A successful build has not yet been independently confirmed. It can also be started manually from the Actions tab.
+## Compilação e instalação para teste
+O workflow `.github/workflows/android.yml` executa `gradle assembleDebug` e publica o APK como artefato `ColorOS16-Launcher-APK`. Abra a execução mais recente em **Actions**, entre em **Artifacts** e baixe o ZIP. Extraia o APK e instale no Android. Depois, pressione Home e selecione **ColorOS 16 Launcher** como tela inicial.
+
+Para voltar ao launcher anterior, vá em Configurações do Android → Aplicativos → Aplicativos padrão → App de início/Tela inicial e selecione o launcher da Xiaomi.
+
+O artefato de Actions é temporário e expira conforme a política de retenção do GitHub. O APK atual é de depuração, não uma versão assinada para distribuição pública.
