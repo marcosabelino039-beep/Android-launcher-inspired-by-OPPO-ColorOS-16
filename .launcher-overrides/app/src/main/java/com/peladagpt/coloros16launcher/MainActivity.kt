@@ -6,6 +6,7 @@ import android.graphics.Canvas
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
@@ -142,6 +143,16 @@ private fun ColorOSLauncher() {
     }
     val filtered = remember(apps, search) {
         if (search.isBlank()) apps else apps.filter { it.label.contains(search, true) }
+    }
+
+    BackHandler(enabled = drawer || settings || folderTitle != null || showCreateFolder || selectedApp != null) {
+        when {
+            selectedApp != null -> selectedApp = null
+            folderTitle != null -> folderTitle = null
+            showCreateFolder -> showCreateFolder = false
+            drawer -> { drawer = false; search = "" }
+            settings -> settings = false
+        }
     }
 
     Box(
