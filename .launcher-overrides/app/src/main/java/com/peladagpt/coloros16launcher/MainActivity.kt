@@ -102,6 +102,7 @@ private fun ColorOSLauncher() {
     var clock by remember { mutableStateOf("") }
     var selectedApp by remember { mutableStateOf<LaunchApp?>(null) }
     var pinnedPackages by remember { mutableStateOf(context.getSharedPreferences("launcher_prefs", 0).getStringSet("pinned_apps", emptySet())?.toSet() ?: emptySet()) }
+    var pinnedOrder by remember { mutableStateOf(context.getSharedPreferences("launcher_prefs", 0).getString("pinned_order", "")?.split("|")?.filter { it.isNotBlank() } ?: emptyList()) }
     var wallpaperUri by remember { mutableStateOf(context.getSharedPreferences("launcher_prefs", 0).getString("wallpaper_uri", null)) }
     val wallpaperPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
@@ -129,6 +130,7 @@ private fun ColorOSLauncher() {
 
     val favorites = remember(apps, pinnedPackages) {
         val chosen = apps.filter { it.packageName in pinnedPackages }
+            .sortedBy { app -> pinnedOrder.indexOf(app.packageName).let { if (it < 0) Int.MAX_VALUE else it } }
         if (chosen.isNotEmpty()) chosen else apps.take(4)
     }
     val filtered = remember(apps, search) {
@@ -278,12 +280,32 @@ private fun ColorOSLauncher() {
             confirmButton = {
                 TextButton(onClick = {
                     val next = if (isPinned) pinnedPackages - app.packageName else pinnedPackages + app.packageName
+                    val nextOrder = if (isPinned) pinnedOrder.filterNot { it == app.packageName } else pinnedOrder.filterNot { it == app.packageName } + app.packageName
                     pinnedPackages = next
-                    context.getSharedPreferences("launcher_prefs", 0).edit().putStringSet("pinned_apps", next).apply()
+                    pinnedOrder = nextOrder
+                    context.getSharedPreferences("launcher_prefs", 0).edit()
+                        .putStringSet("pinned_apps", next)
+                        .putString("pinned_order", nextOrder.joinToString("|")).apply()
                     selectedApp = null
                 }) { Text(if (isPinned) "Remover da tela inicial" else "Adicionar") }
             },
-            dismissButton = { TextButton(onClick = { selectedApp = null }) { Text("Cancelar") } }
+            dismissButton = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (isPinned && pinnedOrder.indexOf(app.packageName) > 0) {
+                        TextButton(onClick = {
+                            val order = pinnedOrder.toMutableList()
+                            val index = order.indexOf(app.packageName)
+                            val previous = order[index - 1]
+                            order[index - 1] = order[index]
+                            order[index] = previous
+                            pinnedOrder = order
+                            context.getSharedPreferences("launcher_prefs", 0).edit().putString("pinned_order", order.joinToString("|")).apply()
+                            selectedApp = null
+                        }) { Text("Mover para esquerda") }
+                    }
+                    TextButton(onClick = { selectedApp = null }) { Text("Fechar") }
+                }
+            }
         )
     }
 
