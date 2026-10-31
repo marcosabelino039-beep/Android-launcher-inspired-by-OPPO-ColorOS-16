@@ -233,6 +233,7 @@ private fun WidgetTile(title: String, subtitle: String, modifier: Modifier = Mod
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun AppIcon(app: LaunchApp, onClick: () -> Unit, onLongClick: () -> Unit = {}) {
     val scope = rememberCoroutineScope()
