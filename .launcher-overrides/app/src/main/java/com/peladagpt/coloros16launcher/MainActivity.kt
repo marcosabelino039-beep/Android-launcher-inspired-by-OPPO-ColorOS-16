@@ -211,16 +211,16 @@ private fun ColorOSLauncher() {
                     Spacer(Modifier.height(15.dp))
                     LazyVerticalGrid(columns = GridCells.Fixed(gridColumns), modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(17.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(favorites) { app -> AppIcon(app, iconSize = homeIconSize.dp, iconShape = iconShape, onClick = { launch(app, context) }, onLongClick = { selectedApp = app }) }
-                        item { FolderIcon(label = socialFolderName, apps = apps.filter { app -> listOf("instagram", "facebook", "tiktok", "twitter", "discord", "reddit", "whatsapp", "pinterest", "snapchat").any { term -> app.label.contains(term, true) || app.packageName.contains(term, true) } }.take(4)) { folderTitle = "Social" } }
-                        item { FolderIcon(label = toolsFolderName, apps = apps.filter { app -> listOf("settings", "file", "manager", "clock", "calculator", "camera", "gallery", "music", "browser", "security", "notes").any { term -> app.label.contains(term, true) || app.packageName.contains(term, true) } }.take(4)) { folderTitle = "Ferramentas" } }
+                        item { FolderIcon(label = socialFolderName, iconShape = iconShape, apps = apps.filter { app -> listOf("instagram", "facebook", "tiktok", "twitter", "discord", "reddit", "whatsapp", "pinterest", "snapchat").any { term -> app.label.contains(term, true) || app.packageName.contains(term, true) } }.take(4)) { folderTitle = "Social" } }
+                        item { FolderIcon(label = toolsFolderName, iconShape = iconShape, apps = apps.filter { app -> listOf("settings", "file", "manager", "clock", "calculator", "camera", "gallery", "music", "browser", "security", "notes").any { term -> app.label.contains(term, true) || app.packageName.contains(term, true) } }.take(4)) { folderTitle = "Ferramentas" } }
                         items(customFolders, key = { "custom_folder_" + it }) { name ->
                             val saved: Set<String> = context.getSharedPreferences("launcher_prefs", 0).getStringSet("folder_apps_" + name, emptySet<String>()) ?: emptySet()
-                            FolderIcon(label = name, apps = apps.filter { it.packageName in saved }.take(4)) { folderTitle = name }
+                            FolderIcon(label = name, iconShape = iconShape, apps = apps.filter { it.packageName in saved }.take(4)) { folderTitle = name }
                         }
                     }
 
                     Row(Modifier.fillMaxWidth().padding(bottom = 12.dp).clip(RoundedCornerShape(28.dp)).background(Color.White.copy(alpha = .15f)).padding(horizontal = 15.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                        favorites.take(3).forEach { app -> SmallAppIcon(app) { launch(app, context) } }
+                        favorites.take(3).forEach { app -> SmallAppIcon(app, iconShape) { launch(app, context) } }
                         Surface(color = Color.White.copy(alpha = .18f), shape = CircleShape, modifier = Modifier.size(48.dp).clickable { drawer = true }) {
                             Icon(Icons.Rounded.Apps, "Abrir aplicativos", tint = Color.White, modifier = Modifier.padding(12.dp))
                         }
@@ -243,7 +243,7 @@ private fun ColorOSLauncher() {
                 OutlinedTextField(value = search, onValueChange = { search = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text("Pesquisar aplicativos") }, leadingIcon = { Icon(Icons.Rounded.Search, null) }, singleLine = true, shape = RoundedCornerShape(22.dp), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = Color.White.copy(alpha = .6f), unfocusedBorderColor = Color.White.copy(alpha = .2f), focusedLeadingIconColor = Color.White, unfocusedLeadingIconColor = Color.White, focusedPlaceholderColor = Color.White.copy(alpha = .5f), unfocusedPlaceholderColor = Color.White.copy(alpha = .5f)))
                 Spacer(Modifier.height(18.dp))
                 LazyVerticalGrid(columns = GridCells.Fixed(4), verticalArrangement = Arrangement.spacedBy(20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(filtered, key = { it.packageName }) { app -> AppIcon(app, onClick = { launch(app, context); drawer = false }, onLongClick = { selectedApp = app }) }
+                    items(filtered, key = { it.packageName }) { app -> AppIcon(app, iconShape = iconShape, onClick = { launch(app, context); drawer = false }, onLongClick = { selectedApp = app }) }
                 }
             }
         }
@@ -303,6 +303,7 @@ private fun ColorOSLauncher() {
         FolderDialog(
             title = title,
             displayName = when (title) { "Social" -> socialFolderName; "Ferramentas" -> toolsFolderName; else -> title },
+            iconShape = iconShape,
             apps = folderApps,
             allApps = apps,
             selectedPackages = selectedPackages,
@@ -399,12 +400,12 @@ private fun AppIcon(app: LaunchApp, iconSize: androidx.compose.ui.unit.Dp = 54.d
 }
 
 @Composable
-private fun SmallAppIcon(app: LaunchApp, onClick: () -> Unit) {
-    AppArtwork(app.icon, Modifier.size(42.dp).clickable { onClick() })
+private fun SmallAppIcon(app: LaunchApp, iconShape: String = "squircle", onClick: () -> Unit) {
+    AppArtwork(app.icon, Modifier.size(42.dp).clickable { onClick() }, iconShape)
 }
 
 @Composable
-private fun FolderIcon(label: String = "Social", apps: List<LaunchApp> = emptyList(), onClick: () -> Unit) {
+private fun FolderIcon(label: String = "Social", iconShape: String = "squircle", apps: List<LaunchApp> = emptyList(), onClick: () -> Unit) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { onClick() }) {
         Box(
             Modifier.size(54.dp).clip(RoundedCornerShape(17.dp))
@@ -417,7 +418,7 @@ private fun FolderIcon(label: String = "Social", apps: List<LaunchApp> = emptyLi
                 Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     apps.chunked(2).forEach { rowApps ->
                         Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                            rowApps.forEach { app -> AppArtwork(app.icon, Modifier.size(17.dp)) }
+                            rowApps.forEach { app -> AppArtwork(app.icon, Modifier.size(17.dp), iconShape) }
                         }
                     }
                 }
@@ -515,6 +516,7 @@ private fun FolderDialog(
     onToggleApp: (LaunchApp) -> Unit,
     onLaunch: (LaunchApp) -> Unit,
     onRename: (String) -> Unit,
+    iconShape: String,
     canDelete: Boolean,
     onDelete: () -> Unit,
     onDismiss: () -> Unit
@@ -592,7 +594,7 @@ private fun FolderDialog(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(apps, key = { it.packageName }) { app ->
-                            AppIcon(app, onClick = { onLaunch(app); onDismiss() })
+                            AppIcon(app, iconShape = iconShape, onClick = { onLaunch(app); onDismiss() })
                         }
                     }
                 }
