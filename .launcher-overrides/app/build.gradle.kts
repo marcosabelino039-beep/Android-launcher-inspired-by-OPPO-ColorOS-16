@@ -12,8 +12,8 @@ android {
         applicationId = "com.peladagpt.coloros16launcher"
         minSdk = 26
         targetSdk = 33
-        versionCode = 10
-        versionName = "0.5.3"
+        versionCode = 11
+        versionName = "0.6.0"
     }
 
     buildFeatures { compose = true }
