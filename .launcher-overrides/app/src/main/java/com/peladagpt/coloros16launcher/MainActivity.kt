@@ -201,8 +201,8 @@ private fun ColorOSLauncher() {
                     Spacer(Modifier.height(15.dp))
                     LazyVerticalGrid(columns = GridCells.Fixed(gridColumns), modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(17.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(favorites) { app -> AppIcon(app, iconSize = homeIconSize.dp, onClick = { launch(app, context) }, onLongClick = { selectedApp = app }) }
-                        item { FolderIcon { folderTitle = "Social" } }
-                        item { FolderIcon(label = "Ferramentas") { folderTitle = "Ferramentas" } }
+                        item { FolderIcon(apps = apps.filter { it.packageName in (pinnedPackages + apps.map { app -> app.packageName }) && listOf("instagram", "facebook", "tiktok", "twitter", "discord", "reddit", "whatsapp", "pinterest", "snapchat").any { term -> it.label.contains(term, true) || it.packageName.contains(term, true) } }.take(4)) { folderTitle = "Social" } }
+                        item { FolderIcon(label = "Ferramentas", apps = apps.filter { app -> listOf("settings", "file", "manager", "clock", "calculator", "camera", "gallery", "music", "browser", "security", "notes").any { term -> app.label.contains(term, true) || app.packageName.contains(term, true) } }.take(4)) { folderTitle = "Ferramentas" } }
                     }
 
                     Row(Modifier.fillMaxWidth().padding(bottom = 12.dp).clip(RoundedCornerShape(28.dp)).background(Color.White.copy(alpha = .15f)).padding(horizontal = 15.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
@@ -352,17 +352,22 @@ private fun SmallAppIcon(app: LaunchApp, onClick: () -> Unit) {
 }
 
 @Composable
-private fun FolderIcon(label: String = "Social", onClick: () -> Unit) {
+private fun FolderIcon(label: String = "Social", apps: List<LaunchApp> = emptyList(), onClick: () -> Unit) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { onClick() }) {
-        Box(Modifier.size(54.dp).clip(RoundedCornerShape(17.dp)).background(Color.White.copy(alpha = .20f)).padding(7.dp)) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Box(Modifier.size(16.dp).clip(RoundedCornerShape(5.dp)).background(Color(0xFF80B8FF)))
-                    Box(Modifier.size(16.dp).clip(RoundedCornerShape(5.dp)).background(Color(0xFFFFA78C)))
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Box(Modifier.size(16.dp).clip(RoundedCornerShape(5.dp)).background(Color(0xFFB9A0FF)))
-                    Box(Modifier.size(16.dp).clip(RoundedCornerShape(5.dp)).background(Color(0xFF8EDBC4)))
+        Box(
+            Modifier.size(54.dp).clip(RoundedCornerShape(17.dp))
+                .background(Color.White.copy(alpha = .20f)).padding(7.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            if (apps.isEmpty()) {
+                Box(Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(Color.White.copy(alpha = .20f)))
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    apps.chunked(2).forEach { rowApps ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                            rowApps.forEach { app -> AppArtwork(app.icon, Modifier.size(17.dp)) }
+                        }
+                    }
                 }
             }
         }
