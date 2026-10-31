@@ -3,7 +3,7 @@
 Launcher Android independente inspirado na linguagem visual do OPPO ColorOS 16. Não é um produto OPPO e não contém código ou recursos proprietários da OPPO.
 
 ## Versão atual
-- Versão: 0.4.2
+- Versão: 0.5.0
 - applicationId: `com.peladagpt.coloros16launcher`
 - Android mínimo: 8.0 (API 26)
 - Alvo de compilação: Android 13 (API 33)
@@ -40,3 +40,7 @@ O workflow `.github/workflows/android.yml` executa `gradle assembleDebug` e publ
 Para voltar ao launcher anterior, vá em Configurações do Android → Aplicativos → Aplicativos padrão → App de início/Tela inicial e selecione o launcher da Xiaomi.
 
 O artefato de Actions é temporário e expira conforme a política de retenção do GitHub. O APK atual é de depuração, não uma versão assinada para distribuição pública.
+
+
+### 0.5.0
+- Tela inicial com múltiplas páginas horizontais, navegação por deslize e indicadores de página. Os aplicativos fixados são distribuídos automaticamente conforme a grade configurada.
