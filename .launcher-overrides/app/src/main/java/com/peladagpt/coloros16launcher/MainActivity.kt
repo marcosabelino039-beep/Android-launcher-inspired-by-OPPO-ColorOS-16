@@ -33,6 +33,7 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Widgets
 import androidx.compose.material3.*
+import androidx.compose.ui.window.Dialog
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,6 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -74,7 +76,7 @@ private fun ColorOSLauncher() {
     var apps by remember { mutableStateOf(emptyList<LaunchApp>()) }
     var drawer by remember { mutableStateOf(false) }
     var search by remember { mutableStateOf("") }
-    var folder by remember { mutableStateOf(false) }
+    var folderTitle by remember { mutableStateOf<String?>(null) }
     var settings by remember { mutableStateOf(false) }
     var clock by remember { mutableStateOf("") }
 
@@ -156,8 +158,8 @@ private fun ColorOSLauncher() {
                     Spacer(Modifier.height(15.dp))
                     LazyVerticalGrid(columns = GridCells.Fixed(4), modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(17.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(favorites) { app -> AppIcon(app) { launch(app, context) } }
-                        item { FolderIcon { folder = true } }
-                        item { FolderIcon(label = "Ferramentas") { folder = true } }
+                        item { FolderIcon { folderTitle = "Social" } }
+                        item { FolderIcon(label = "Ferramentas") { folderTitle = "Ferramentas" } }
                     }
 
                     Row(Modifier.fillMaxWidth().padding(bottom = 12.dp).clip(RoundedCornerShape(28.dp)).background(Color.White.copy(alpha = .15f)).padding(horizontal = 15.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
@@ -185,13 +187,15 @@ private fun ColorOSLauncher() {
         }
     }
 
-    if (folder) AlertDialog(
-        onDismissRequest = { folder = false },
-        title = { Text("Pasta inteligente") },
-        text = { Text("A base visual da superpasta está pronta. Edição, arrastar ícones e persistência serão adicionados na próxima etapa.") },
-        confirmButton = { TextButton(onClick = { folder = false }) { Text("OK") } },
-        shape = RoundedCornerShape(28.dp)
-    )
+    folderTitle?.let { title ->
+        val folderApps = remember(apps, title) {
+            val terms = if (title == "Social") listOf("instagram", "facebook", "tiktok", "twitter", "x", "discord", "reddit", "telegram", "whatsapp", "pinterest", "snapchat")
+                        else listOf("settings", "file", "manager", "clock", "calculator", "camera", "gallery", "music", "browser", "security", "weather", "notes")
+            apps.filter { app -> terms.any { term -> app.label.contains(term, true) || app.packageName.contains(term, true) } }
+                .ifEmpty { apps.take(12) }
+        }
+        FolderDialog(title = title, apps = folderApps, onLaunch = { app -> launch(app, context) }, onDismiss = { folderTitle = null })
+    }
 }
 
 @Composable
@@ -205,9 +209,17 @@ private fun WidgetTile(title: String, subtitle: String, modifier: Modifier = Mod
 
 @Composable
 private fun AppIcon(app: LaunchApp, onClick: () -> Unit) {
+    val scope = rememberCoroutineScope()
     var pressed by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (pressed) .88f else 1f, spring(dampingRatio = .48f, stiffness = 500f), label = "icon-press")
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().scale(scale).clickable { pressed = true; onClick(); pressed = false }) {
+    val scale by animateFloatAsState(if (pressed) .86f else 1f, spring(dampingRatio = .42f, stiffness = 420f), label = "icon-press")
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().scale(scale).clickable {
+        scope.launch {
+            pressed = true
+            delay(85)
+            pressed = false
+            onClick()
+        }
+    }) {
         AppArtwork(app.icon, Modifier.size(54.dp))
         Spacer(Modifier.height(6.dp))
         Text(app.label, color = Color.White, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -271,5 +283,47 @@ private fun SettingsPage(onBack: () -> Unit) {
         }
         Spacer(Modifier.height(12.dp))
         Text("Algumas opções são prévias visuais; os controles reais serão ligados às próximas versões.", color = Color.White.copy(alpha = .5f), fontSize = 11.sp)
+    }
+}
+
+@Composable
+private fun FolderDialog(
+    title: String,
+    apps: List<LaunchApp>,
+    onLaunch: (LaunchApp) -> Unit,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(30.dp),
+            color = Color(0xF226344B),
+            tonalElevation = 12.dp
+        ) {
+            Column(Modifier.padding(20.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(title, color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                        Text(apps.size.toString() + " aplicativos", color = Color.White.copy(alpha = .62f), fontSize = 12.sp)
+                    }
+                    TextButton(onClick = onDismiss) { Text("Fechar", color = Color.White) }
+                }
+                Spacer(Modifier.height(14.dp))
+                if (apps.isEmpty()) {
+                    Text("Nenhum aplicativo encontrado nesta pasta.", color = Color.White.copy(alpha = .75f))
+                } else {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(4),
+                        modifier = Modifier.heightIn(max = 390.dp),
+                        verticalArrangement = Arrangement.spacedBy(17.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(apps, key = { it.packageName }) { app ->
+                            AppIcon(app) { onLaunch(app); onDismiss() }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
